@@ -1,4 +1,3 @@
-
 import os
 from supabase import create_client, Client
 
@@ -50,74 +49,74 @@ def get_department(complaint: str) -> str:
     
     # Mapping: Key = Table Name (underscores), Value = list of keywords
     hospital_map = {
-    "Cardiology": [
-        "chest pain", "angina", "heart attack", "heart failure", "arrhythmia", 
-        "chest tightness", "palpitations", "heart", "hypertension", "high blood pressure",
-        "bp", "pulse", "tachycardia", "bradycardia", "irregular heartbeat", 
-        "cardiac", "myocardial", "coronary", "valve", "atrial", "ventricular"
-    ],
-    "Neurology": [
-        "stroke", "migraine", "vertigo", "confusion", "syncope", "dizziness", 
-        "unresponsive", "headache", "blurry vision", "faint", "seizure", 
-        "paralysis", "numbness", "tingling", "tremor", "slurred speech", 
-        "memory loss", "coma", "concussion", "brain", "nerve", "neuropathy", 
-        "epilepsy", "facial droop", "unconscious"
-    ],
-    "Gastroenterology": [
-        "gastric", "indigestion", "abdominal", "nausea", "vomiting", "appetite", 
-        "stomach", "belly", "diarrhea", "constipation", "heartburn", "reflux", 
-        "acid", "bloating", "gas", "ulcer", "liver", "bowel", "stool", "blood in stool",
-        "appendicitis", "cramps", "dysphagia", "swallowing difficulty", "gallbladder"
-    ],
-    "Pulmonology": [
-        "pneumonia", "breath", "cough", "respiratory", "asthma", "chest heaviness", 
-        "lung", "wheezing", "bronchitis", "shortness of breath", "dyspnea", 
-        "sputum", "phlegm", "copd", "tuberculosis", "apnea", "oxygen", 
-        "suffocation", "airway"
-    ],
-    "Orthopedics": [
-        "sprain", "fracture", "bone", "joint", "back pain", "leg pain", "shoulder", 
-        "knee", "arm", "swelling", "arthritis", "dislocation", "hip", "ankle", 
-        "wrist", "spine", "disc", "muscle", "cramp", "strain", "tear", "ligament", 
-        "tendon", "rib", "neck pain", "limp"
-    ],
-    "Emergency_Trauma": [
-        "crash", "trauma", "fall", "injury", "severe", "shock", "overdose", 
-        "accident", "bleed", "burn", "cut", "wound", "laceration", "gunshot", 
-        "stab", "head injury", "electrocution", "drowning", "critical", 
-        "hemorrhage", "amputation", "assault", "bite", "crush"
-    ],
-    "General_Medicine": [
-        "fever", "flu", "fatigue", "weakness", "checkup", "edema", "dehydration", 
-        "cold", "infection", "malaise", "weight loss", "chills", "sweat", "viral", 
-        "bacterial", "diabetes", "sugar", "lethargy", "body ache", "sick", "shivering"
-    ],
-    "Dermatology": [
-        "rash", "skin", "itch", "redness", "lesion", "boil", "acne", "eczema", 
-        "psoriasis", "hives", "blister", "sore", "lump", "mole", "hair", "nail", 
-        "infection", "allergy", "burns"
-    ],
-    "ENT": [
-        "ear", "throat", "nose", "sinus", "hearing", "tinnitus", "ringing", 
-        "deafness", "tonsil", "hoarse", "voice", "smell", "nosebleed", 
-        "nasal", "congestion", "sore throat"
-    ],
-    "Urology_Nephrology": [
-        "kidney", "urine", "urinary", "bladder", "stone", "prostate", "dialysis", 
-        "uti", "burning", "blood in urine", "hematuria", "groin", "testicular", 
-        "renal", "incontinence", "stream", "flank pain"
-    ],
-    "Psychiatry": [
-        "anxiety", "depression", "suicide", "hallucination", "panic", 
-        "schizophrenia", "bipolar", "stress", "insomnia", "delusion", 
-        "aggressive", "behavioral", "mental", "mood", "withdrawal"
-    ],
-    "Toxicology": [
-        "poison", "drug", "pill", "chemical", "ingestion", "venom", 
-        "snake bite", "spider bite", "reaction", "alcohol", "intoxication", 
-        "substance", "fume", "gas"
-    ]
-}
+        "Cardiology": [
+            "chest pain", "angina", "heart attack", "heart failure", "arrhythmia", 
+            "chest tightness", "palpitations", "heart", "hypertension", "high blood pressure",
+            "bp", "pulse", "tachycardia", "bradycardia", "irregular heartbeat", 
+            "cardiac", "myocardial", "coronary", "valve", "atrial", "ventricular"
+        ],
+        "Neurology": [
+            "stroke", "migraine", "vertigo", "confusion", "syncope", "dizziness", 
+            "unresponsive", "headache", "blurry vision", "faint", "seizure", 
+            "paralysis", "numbness", "tingling", "tremor", "slurred speech", 
+            "memory loss", "coma", "concussion", "brain", "nerve", "neuropathy", 
+            "epilepsy", "facial droop", "unconscious"
+        ],
+        "Gastroenterology": [
+            "gastric", "indigestion", "abdominal", "nausea", "vomiting", "appetite", 
+            "stomach", "belly", "diarrhea", "constipation", "heartburn", "reflux", 
+            "acid", "bloating", "gas", "ulcer", "liver", "bowel", "stool", "blood in stool",
+            "appendicitis", "cramps", "dysphagia", "swallowing difficulty", "gallbladder"
+        ],
+        "Pulmonology": [
+            "pneumonia", "breath", "cough", "respiratory", "asthma", "chest heaviness", 
+            "lung", "wheezing", "bronchitis", "shortness of breath", "dyspnea", 
+            "sputum", "phlegm", "copd", "tuberculosis", "apnea", "oxygen", 
+            "suffocation", "airway"
+        ],
+        "Orthopedics": [
+            "sprain", "fracture", "bone", "joint", "back pain", "leg pain", "shoulder", 
+            "knee", "arm", "swelling", "arthritis", "dislocation", "hip", "ankle", 
+            "wrist", "spine", "disc", "muscle", "cramp", "strain", "tear", "ligament", 
+            "tendon", "rib", "neck pain", "limp"
+        ],
+        "Emergency_Trauma": [
+            "crash", "trauma", "fall", "injury", "severe", "shock", "overdose", 
+            "accident", "bleed", "burn", "cut", "wound", "laceration", "gunshot", 
+            "stab", "head injury", "electrocution", "drowning", "critical", 
+            "hemorrhage", "amputation", "assault", "bite", "crush"
+        ],
+        "General_Medicine": [
+            "fever", "flu", "fatigue", "weakness", "checkup", "edema", "dehydration", 
+            "cold", "infection", "malaise", "weight loss", "chills", "sweat", "viral", 
+            "bacterial", "diabetes", "sugar", "lethargy", "body ache", "sick", "shivering"
+        ],
+        "Dermatology": [
+            "rash", "skin", "itch", "redness", "lesion", "boil", "acne", "eczema", 
+            "psoriasis", "hives", "blister", "sore", "lump", "mole", "hair", "nail", 
+            "infection", "allergy", "burns"
+        ],
+        "ENT": [
+            "ear", "throat", "nose", "sinus", "hearing", "tinnitus", "ringing", 
+            "deafness", "tonsil", "hoarse", "voice", "smell", "nosebleed", 
+            "nasal", "congestion", "sore throat"
+        ],
+        "Urology_Nephrology": [
+            "kidney", "urine", "urinary", "bladder", "stone", "prostate", "dialysis", 
+            "uti", "burning", "blood in urine", "hematuria", "groin", "testicular", 
+            "renal", "incontinence", "stream", "flank pain"
+        ],
+        "Psychiatry": [
+            "anxiety", "depression", "suicide", "hallucination", "panic", 
+            "schizophrenia", "bipolar", "stress", "insomnia", "delusion", 
+            "aggressive", "behavioral", "mental", "mood", "withdrawal"
+        ],
+        "Toxicology": [
+            "poison", "drug", "pill", "chemical", "ingestion", "venom", 
+            "snake bite", "spider bite", "reaction", "alcohol", "intoxication", 
+            "substance", "fume", "gas"
+        ]
+    }
 
     for department, keywords in hospital_map.items():
         if any(k in complaint for k in keywords):
