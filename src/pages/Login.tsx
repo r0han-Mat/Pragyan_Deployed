@@ -15,6 +15,9 @@ export default function Login() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  
+  // New state for Login Mode: 'selection' | 'hospital'
+  const [loginMode, setLoginMode] = useState<"selection" | "hospital">("selection");
 
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
@@ -162,139 +165,191 @@ A real-time clinical support interface engineered for high-pressure environments
               shadow-[0_0_50px_rgba(0,255,100,0.15)]
               text-white
               rounded-xl
+              overflow-hidden
               "
             >
-
-              <CardHeader className="text-center pb-2">
-
-                <CardTitle className="text-3xl font-bold text-white">
-                  {isSignUp ? "Create Account" : "Secure Login"}
-                </CardTitle>
-
-                <CardDescription className="text-red-400">
-                  {isSignUp
-                    ? "Register to access PARS"
-                    : "Sign in to continue"}
-                </CardDescription>
-
-              </CardHeader>
-
-              <CardContent>
-
-                <form onSubmit={handleSubmit} className="space-y-5">
-
-                  {/* EMAIL */}
-                  <div>
-                    <Label className="text-gray-300 mb-1 block">
-                      Email
-                    </Label>
-
-                    <Input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="doctor@hospital.com"
-                      className="
-                      bg-black/70
-                      border border-red-900
-                      focus:border-red-500
-                      focus:ring-red-500/30
-                      text-white
-                      "
-                    />
+              {loginMode === "selection" ? (
+                // --- SELECTION MODE ---
+                <div className="p-8 flex flex-col gap-6">
+                  <div className="text-center">
+                    <h2 className="text-2xl font-bold text-white mb-2">Welcome to PARS</h2>
+                    <p className="text-gray-400 text-sm">Select your portal to continue</p>
                   </div>
 
-                  {/* PASSWORD */}
-                  <div>
-                    <Label className="text-gray-300 mb-1 block">
-                      Password
-                    </Label>
+                  <div className="grid gap-4">
+                    {/* HOSPITAL ATTENDANT */}
+                    <motion.button
+                      whileHover={{ scale: 1.02, backgroundColor: "rgba(255,255,255,0.05)" }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setLoginMode("hospital")}
+                      className="flex flex-col items-center gap-3 p-6 rounded-xl border border-red-500/30 bg-red-950/10 transition-all hover:border-red-500 group"
+                    >
+                       <div className="p-3 rounded-full bg-red-500/10 text-red-500 group-hover:bg-red-500 group-hover:text-white transition-colors">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 21a9 9 0 0 0 9-9c0-4.97-4.03-9-9-9a9 9 0 0 0-9 9c0 4.97 4.03 9 9 9Z"/><path d="M12 7v10"/><path d="M7 12h10"/></svg>
+                       </div>
+                       <div>
+                         <h3 className="text-lg font-bold text-white">Hospital Attendant</h3>
+                         <p className="text-xs text-red-300/70">Staff Access & Triage Monitoring</p>
+                       </div>
+                    </motion.button>
 
-                    <Input
-                      type="password"
-                      required
-                      minLength={6}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="
-                      bg-black/70
-                      border border-red-900
-                      focus:border-red-500
-                      focus:ring-red-500/30
-                      text-white
-                      "
-                    />
+                    {/* PATIENT */}
+                    <motion.button
+                      whileHover={{ scale: 1.02, backgroundColor: "rgba(255,255,255,0.05)" }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => navigate("/patient")}
+                      className="flex flex-col items-center gap-3 p-6 rounded-xl border border-blue-500/30 bg-blue-950/10 transition-all hover:border-blue-500 group"
+                    >
+                       <div className="p-3 rounded-full bg-blue-500/10 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                       </div>
+                       <div>
+                         <h3 className="text-lg font-bold text-white">Patient Login</h3>
+                         <p className="text-xs text-blue-300/70">Self Check-In & Symptom Analysis</p>
+                       </div>
+                    </motion.button>
                   </div>
-
-                  {/* ERROR */}
-                  {error && (
-                    <div className="flex items-center gap-2 bg-red-950/40 border border-red-700 text-red-400 p-3 rounded">
-                      <AlertTriangle size={16} />
-                      {error}
-                    </div>
-                  )}
-
-                  {/* SUCCESS */}
-                  {message && (
-                    <div className="bg-red-900/30 border border-red-700 text-red-400 p-3 rounded">
-                      {message}
-                    </div>
-                  )}
-
-                  {/* BUTTON */}
-                  <motion.div whileTap={{ scale: 0.97 }}>
-                    <Button
-                      type="submit"
-                      disabled={loading}
-                      className="
-                      w-full
-                      bg-red-600
-                      hover:bg-red-500
-                      text-black
-                      font-semibold
-                      border border-red-400
-                      shadow-[0_0_20px_rgba(0,255,100,0.35)]
-                      "
+                </div>
+              ) : (
+                // --- HOSPITAL FORM MODE ---
+                <>
+                  <CardHeader className="text-center pb-2 relative">
+                    <button 
+                      onClick={() => setLoginMode("selection")}
+                      className="absolute left-6 top-6 text-gray-500 hover:text-white transition-colors text-xs uppercase font-bold flex items-center gap-1"
                     >
-                      {loading
-                        ? "Authenticating..."
-                        : isSignUp
-                        ? "Create Account"
-                        : "Login"}
-                    </Button>
-                  </motion.div>
-
-                  {/* TOGGLE */}
-                  <div className="text-center text-gray-400 text-sm pt-2">
-
-                    {isSignUp
-                      ? "Already registered?"
-                      : "New to PARS?"}
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsSignUp(!isSignUp);
-                        setError("");
-                        setMessage("");
-                      }}
-                      className="
-                      ml-2
-                      text-red-400
-                      hover:text-red-300
-                      font-semibold
-                      "
-                    >
-                      {isSignUp ? "Login" : "Register"}
+                      ← Back
                     </button>
+                    <CardTitle className="text-3xl font-bold text-white">
+                      {isSignUp ? "Create Account" : "Secure Login"}
+                    </CardTitle>
 
-                  </div>
+                    <CardDescription className="text-red-400">
+                      {isSignUp
+                        ? "Register to access PARS"
+                        : "Sign in to continue"}
+                    </CardDescription>
 
-                </form>
+                  </CardHeader>
 
-              </CardContent>
+                  <CardContent>
+
+                    <form onSubmit={handleSubmit} className="space-y-5">
+
+                      {/* EMAIL */}
+                      <div>
+                        <Label className="text-gray-300 mb-1 block">
+                          Email
+                        </Label>
+
+                        <Input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="doctor@hospital.com"
+                          className="
+                          bg-black/70
+                          border border-red-900
+                          focus:border-red-500
+                          focus:ring-red-500/30
+                          text-white
+                          "
+                        />
+                      </div>
+
+                      {/* PASSWORD */}
+                      <div>
+                        <Label className="text-gray-300 mb-1 block">
+                          Password
+                        </Label>
+
+                        <Input
+                          type="password"
+                          required
+                          minLength={6}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="
+                          bg-black/70
+                          border border-red-900
+                          focus:border-red-500
+                          focus:ring-red-500/30
+                          text-white
+                          "
+                        />
+                      </div>
+
+                      {/* ERROR */}
+                      {error && (
+                        <div className="flex items-center gap-2 bg-red-950/40 border border-red-700 text-red-400 p-3 rounded">
+                          <AlertTriangle size={16} />
+                          {error}
+                        </div>
+                      )}
+
+                      {/* SUCCESS */}
+                      {message && (
+                        <div className="bg-red-900/30 border border-red-700 text-red-400 p-3 rounded">
+                          {message}
+                        </div>
+                      )}
+
+                      {/* BUTTON */}
+                      <motion.div whileTap={{ scale: 0.97 }}>
+                        <Button
+                          type="submit"
+                          disabled={loading}
+                          className="
+                          w-full
+                          bg-red-600
+                          hover:bg-red-500
+                          text-black
+                          font-semibold
+                          border border-red-400
+                          shadow-[0_0_20px_rgba(0,255,100,0.35)]
+                          "
+                        >
+                          {loading
+                            ? "Authenticating..."
+                            : isSignUp
+                            ? "Create Account"
+                            : "Login"}
+                        </Button>
+                      </motion.div>
+
+                      {/* TOGGLE */}
+                      <div className="text-center text-gray-400 text-sm pt-2">
+
+                        {isSignUp
+                          ? "Already registered?"
+                          : "New to PARS?"}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsSignUp(!isSignUp);
+                            setError("");
+                            setMessage("");
+                          }}
+                          className="
+                          ml-2
+                          text-red-400
+                          hover:text-red-300
+                          font-semibold
+                          "
+                        >
+                          {isSignUp ? "Login" : "Register"}
+                        </button>
+
+                      </div>
+
+                    </form>
+
+                  </CardContent>
+                </>
+              )}
 
             </Card>
 
