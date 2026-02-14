@@ -1,13 +1,17 @@
+
 import { useState } from "react";
 import { motion } from "framer-motion";
-import axios from "axios"; // Add axios
+import axios from "axios";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea"; 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Stethoscope, Loader2, Upload, FileText } from "lucide-react"; // Add Upload icons
+import { Stethoscope, Loader2, Upload, FileText, Mic, MicOff } from "lucide-react"; 
 import { PatientInput } from "@/hooks/useTriage";
+import { useSpeechToText } from "@/hooks/useSpeechToText";
+import { parseVoiceInput } from "@/utils/voiceParser";
 
 interface Props {
   onSubmit: (data: PatientInput & { name: string }) => void;
@@ -35,7 +39,7 @@ const INITIAL: PatientInput & { name: string } = {
 
 export default function TriageForm({ onSubmit, loading }: Props) {
   const [form, setForm] = useState({ ...INITIAL });
-  const [isUploading, setIsUploading] = useState(false); // New State for Upload
+  const [isUploading, setIsUploading] = useState(false);
 
   const set = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -44,7 +48,27 @@ export default function TriageForm({ onSubmit, loading }: Props) {
     onSubmit(form);
   };
 
-  // --- NEW FUNCTION: Handle File Upload ---
+  // --- Voice Handler ---
+  const handleVoiceResult = (text: string) => {
+    // 1. Append to Chief Complaint
+    setForm(prev => ({
+      ...prev,
+      Chief_Complaint: prev.Chief_Complaint ? `${prev.Chief_Complaint} ${text}` : text
+    }));
+
+    // 2. Parse & Auto-fill
+    const { extracted } = parseVoiceInput(text);
+    if (Object.keys(extracted).length > 0) {
+      setForm(prev => ({ ...prev, ...extracted }));
+    }
+  };
+
+  const { isListening, toggleListening, hasSupport } = useSpeechToText({
+    onResult: handleVoiceResult,
+    continuous: true
+  });
+
+  // --- Document Upload Handler ---
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -54,31 +78,26 @@ export default function TriageForm({ onSubmit, loading }: Props) {
     formData.append("file", file);
 
     try {
-      // 1. Send to Backend
       const response = await axios.post("http://localhost:8000/parse-document", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
       const extracted = response.data.data;
-
-      // 2. Map Backend Keys to Frontend State
-      // The parser returns "Temp", but your state uses "Temperature"
       const mappedData = { ...extracted };
       if (mappedData.Temp) {
         mappedData.Temperature = mappedData.Temp;
         delete mappedData.Temp;
       }
 
-      // 3. Update Form State
       setForm((prev) => ({
         ...prev,
-        ...mappedData, // Overwrite with extracted values
+        ...mappedData,
       }));
 
-      alert(`✅ Scanned successfully! Found: ${Object.keys(mappedData).join(", ")}`);
+      alert(`✅ Scanned successfully!`);
     } catch (error) {
       console.error("Upload failed", error);
-      alert("❌ Failed to parse document. Is the backend running?");
+      alert("❌ Failed to parse document.");
     } finally {
       setIsUploading(false);
     }
@@ -88,7 +107,7 @@ export default function TriageForm({ onSubmit, loading }: Props) {
     <div className="flex h-full flex-col">
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
         
-        {/* --- NEW SECTION: Auto-Fill Upload Box --- */}
+        {/* --- Auto-Fill Upload Box --- */}
         <div className="mb-2 rounded-lg border border-dashed border-border bg-secondary/30 p-3 transition-colors hover:bg-secondary/50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -125,8 +144,7 @@ export default function TriageForm({ onSubmit, loading }: Props) {
             </label>
           </div>
         </div>
-        {/* --------------------------------------- */}
-
+        
         {/* Name */}
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Patient Name</Label>
@@ -137,15 +155,31 @@ export default function TriageForm({ onSubmit, loading }: Props) {
           />
         </div>
 
-        {/* Chief Complaint */}
-        <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Chief Complaint / Symptoms (Optional)</Label>
-          <Input 
-            value={form.Chief_Complaint || ""} 
-            onChange={(e) => set("Chief_Complaint", e.target.value)} 
-            placeholder="e.g. Chest pain radiating to left arm..."
-            className="border-border bg-secondary text-foreground placeholder:text-muted-foreground/50" 
-          />
+        {/* Chief Complaint WITH VOICE */}
+        <div className="space-y-1 relative">
+          <div className="flex justify-between items-center">
+             <Label className="text-xs text-muted-foreground">Chief Complaint / Symptoms (Optional)</Label>
+             {hasSupport && (
+               <button
+                 type="button"
+                 onClick={toggleListening}
+                 className={`flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full transition-all ${
+                    isListening ? "bg-red-500 text-white animate-pulse" : "bg-primary/10 text-primary hover:bg-primary/20"
+                 }`}
+               >
+                 {isListening ? <Mic className="h-3 w-3" /> : <MicOff className="h-3 w-3" />}
+                 {isListening ? "Listening" : "Voice Input"}
+               </button>
+             )}
+          </div>
+          <div className={`relative transition-all ${isListening ? "ring-2 ring-primary/50 rounded-md" : ""}`}>
+            <Textarea 
+              value={form.Chief_Complaint || ""} 
+              onChange={(e) => set("Chief_Complaint", e.target.value)} 
+              placeholder="e.g. Chest pain radiating to left arm..."
+              className="border-border bg-secondary text-foreground placeholder:text-muted-foreground/50 min-h-[80px]" 
+            />
+          </div>
         </div>
 
         {/* Demographics */}
