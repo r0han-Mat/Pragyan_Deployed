@@ -17,6 +17,23 @@ function riskColor(label: string | null) {
   }
 }
 
+function getDisplayId(id: string) {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = ((hash << 5) - hash) + id.charCodeAt(i);
+    hash |= 0;
+  }
+  
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < 6; i++) {
+    hash = Math.imul(1664525, hash) + 1013904223 | 0;
+    const index = Math.abs(hash) % chars.length;
+    result += chars[index];
+  }
+  return `sdv-id-${result}`;
+}
+
 export default function PatientQueue({ patients, selectedId, onSelect }: Props) {
   return (
     <div className="flex h-full flex-col">
@@ -37,7 +54,12 @@ export default function PatientQueue({ patients, selectedId, onSelect }: Props) 
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">{p.name}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-foreground">{p.name}</p>
+                    <span className="text-[10px] font-mono text-muted-foreground/60 tracking-wider">
+                      {getDisplayId(p.id)}
+                    </span>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     {p.age}y • {p.gender} • {p.arrival_mode}
                   </p>
