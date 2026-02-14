@@ -11,9 +11,9 @@ import {
   ShieldAlert,
   Star,
   Siren,
-  CheckCircle2,
   ChevronRight,
-  Users
+  Users,
+  Building2
 } from "lucide-react";
 import { TriageResult } from "@/hooks/useTriage";
 import { Patient } from "@/hooks/usePatients";
@@ -26,7 +26,6 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
 
 interface Props {
   result: TriageResult | null;
@@ -93,13 +92,10 @@ export default function RiskPanel({ result, patients, apiError }: Props) {
   const [randomProtocol, setRandomProtocol] = useState<any>(null);
   const [showFullList, setShowFullList] = useState(false);
   
-  // Resolve theme based on risk label
   const riskKey = result?.risk_label as keyof typeof THEME || "LOW";
   const currentTheme = THEME[riskKey];
-
   const scorePercent = result ? Math.round(result.risk_score * 100) : 0;
 
-  // Logic to find best available doctor
   const availableSpecialists = result?.referral?.doctors.filter(d => d.available) || [];
   const bestSpecialist = availableSpecialists.length > 0 
     ? availableSpecialists.reduce((max, doc) => doc.experience > max.experience ? doc : max, availableSpecialists[0])
@@ -115,7 +111,6 @@ export default function RiskPanel({ result, patients, apiError }: Props) {
 
   return (
     <div className="flex h-full flex-col bg-zinc-950 border-l border-zinc-800 relative overflow-hidden transition-colors duration-500">
-      {/* Background Grid Pattern - Dynamic Color */}
       <div 
         className="absolute inset-0 z-0 opacity-[0.05] transition-all duration-500" 
         style={{ 
@@ -217,7 +212,77 @@ export default function RiskPanel({ result, patients, apiError }: Props) {
             </div>
           )}
 
-          {/* 3. PRIORITY ACTION PROTOCOL */}
+          {/* 3. SPECIALIST REFERRAL WITH BIG HEADER */}
+          {result?.referral && (
+            <div className="space-y-4 pt-4 border-t border-zinc-800">
+               <div className="flex items-center justify-between">
+                  <h3 className="flex items-center gap-2 text-sm font-bold text-zinc-100 uppercase tracking-wide">
+                    Specialist Match
+                  </h3>
+                  <button 
+                    onClick={() => setShowFullList(true)}
+                    className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider hover:underline ${currentTheme.textBright}`}
+                  >
+                    View Full List <ChevronRight size={10} />
+                  </button>
+               </div>
+
+               {/* --- THE BIG DEPARTMENT BANNER --- */}
+               <div className="relative overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900/30">
+                  {/* Background Glow */}
+                  <div className={`absolute inset-0 opacity-10 bg-gradient-to-r ${currentTheme.text.replace('text', 'from')} to-transparent`} />
+                  
+                  <div className="relative p-6 flex flex-col items-center justify-center text-center gap-2">
+                     <div className="space-y-1">
+                       <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Recommended Department</p>
+                       <h2 className="text-2xl font-black text-white uppercase tracking-tight font-serif-display">
+                         {result.referral.department.replace("_", " ")}
+                       </h2>
+                     </div>
+                  </div>
+
+                  {/* Best Match Doctor Preview */}
+                  <div className="border-t border-zinc-800/50 bg-black/20 p-3">
+                    {availableSpecialists.length > 0 ? (
+                       availableSpecialists.map((doc, idx) => {
+                         const isRecommended = doc.name === bestSpecialist?.name;
+                         if (!isRecommended) return null; 
+
+                         return (
+                           <div key={idx} className="flex items-center justify-between px-2">
+                              <div className="flex items-center gap-3">
+                                 <div className={`flex h-8 w-8 items-center justify-center rounded font-bold text-[10px] 
+                                   ${currentTheme.bg} ${currentTheme.text} border ${currentTheme.border}`}>
+                                   {doc.name.split(" ")[1]?.[0] || doc.name.charAt(0)}
+                                 </div>
+                                 <div className="text-left">
+                                    <div className="text-xs font-bold text-white flex items-center gap-2">
+                                      {doc.name}
+                                      <Badge variant="secondary" className="h-4 px-1 text-[9px] bg-zinc-800 text-zinc-400 border-0">Top Match</Badge>
+                                    </div>
+                                    <div className="text-[10px] text-zinc-500">
+                                      Senior Resident • {doc.experience}y Exp
+                                    </div>
+                                 </div>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="relative flex h-2 w-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                              </div>
+                           </div>
+                         );
+                       })
+                    ) : (
+                      <div className="text-center text-[10px] text-zinc-500 py-1">No specialists currently available</div>
+                    )}
+                  </div>
+               </div>
+            </div>
+          )}
+
+          {/* 4. PRIORITY ACTION PROTOCOL (Moved below referral) */}
           {result && randomProtocol && (
             <div className="space-y-4">
                <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
@@ -245,96 +310,6 @@ export default function RiskPanel({ result, patients, apiError }: Props) {
                     </p>
                   </div>
                 </motion.div>
-            </div>
-          )}
-
-          {/* 4. SPECIALIST REFERRAL */}
-          {result?.referral && (
-            <div className="space-y-4 pt-4 border-t border-zinc-800">
-               <div className="flex items-center justify-between">
-                  <h3 className="flex items-center gap-2 text-sm font-bold text-zinc-100 uppercase tracking-wide">
-                    <ShieldAlert className={`h-4 w-4 ${currentTheme.text}`} />
-                    Specialist Match
-                  </h3>
-                  
-                  {/* VIEW FULL LIST BUTTON */}
-                  <button 
-                    onClick={() => setShowFullList(true)}
-                    className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider hover:underline ${currentTheme.textBright}`}
-                  >
-                    View Full List <ChevronRight size={10} />
-                  </button>
-               </div>
-
-               {/* Embedded Preview (Top Match only) */}
-               <div className="rounded border border-zinc-800 bg-zinc-900/30 p-4">
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Department</span>
-                    <span className="text-sm font-black text-white uppercase tracking-wider font-mono">
-                      {result.referral.department.replace("_", " ")}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2">
-                    {availableSpecialists.length > 0 ? (
-                       availableSpecialists.map((doc, idx) => {
-                         const isRecommended = doc.name === bestSpecialist?.name;
-                         // Show all available doctors in the list
-                         // if (!isRecommended && idx > 0) return null; 
-
-                         return (
-                           <div 
-                             key={idx} 
-                             className={`group relative flex items-center justify-between rounded border p-3 transition-all 
-                               ${isRecommended 
-                                 ? `${currentTheme.border} ${currentTheme.bg.replace('/40', '/10')}` 
-                                 : 'border-zinc-800 bg-zinc-900/50 opacity-60'
-                               }`}
-                           >
-                              {isRecommended && (
-                                <div className="absolute -top-2 -right-2">
-                                  <span className={`flex items-center gap-1 text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-sm uppercase tracking-wider`}
-                                    style={{ backgroundColor: currentTheme.hex }}>
-                                    <Star size={8} fill="white" /> Top Match
-                                  </span>
-                                </div>
-                              )}
-
-                              <div className="flex items-center gap-3">
-                                 <div className={`flex h-8 w-8 items-center justify-center rounded font-bold text-[10px] 
-                                   ${isRecommended ? 'text-white' : 'bg-zinc-800 text-zinc-400'}`}
-                                   style={{ backgroundColor: isRecommended ? currentTheme.hex : undefined }}>
-                                   {doc.name.split(" ")[1]?.[0] || doc.name.charAt(0)}
-                                 </div>
-                                 
-                                 <div>
-                                    <div className={`font-bold text-xs ${isRecommended ? 'text-white' : 'text-zinc-300'}`}>
-                                      {doc.name}
-                                    </div>
-                                    <div className="text-[10px] font-mono text-zinc-500">
-                                      {doc.experience}Y EXP
-                                    </div>
-                                 </div>
-                              </div>
-                              
-                              <div className="flex items-center gap-1">
-                                <span className="relative flex h-1.5 w-1.5">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                                </span>
-                                <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider">Ready</span>
-                              </div>
-                           </div>
-                         );
-                       })
-                    ) : (
-                      <div className="rounded border border-dashed border-zinc-800 p-4 text-center">
-                        <UserRound className="mx-auto h-5 w-5 text-zinc-700 mb-1" />
-                        <p className="text-[10px] text-zinc-500 font-mono">NO SPECIALISTS AVAILABLE</p>
-                      </div>
-                    )}
-                  </div>
-               </div>
             </div>
           )}
 
@@ -416,7 +391,7 @@ export default function RiskPanel({ result, patients, apiError }: Props) {
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                               </span>
-                              Available
+                              Online
                            </span>
                         </div>
                      </div>
