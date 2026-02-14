@@ -104,13 +104,7 @@ export default function PatientIntake() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground font-sans selection:bg-primary/20 overflow-hidden relative">
-      
-      {/* Background Grid Pattern */}
-      <div 
-        className="absolute inset-0 pointer-events-none opacity-[0.03] z-0" 
-        style={{ backgroundImage: "radial-gradient(currentColor 1px, transparent 1px)", backgroundSize: "24px 24px" }} 
-      />
+    <div className="flex h-screen flex-col text-foreground font-sans selection:bg-primary/20 overflow-hidden relative">
 
       {/* Header */}
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card/50 px-6 backdrop-blur-md z-10">

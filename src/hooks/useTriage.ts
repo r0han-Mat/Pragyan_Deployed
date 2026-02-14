@@ -132,5 +132,9 @@ function clientSideFallback(data: PatientInput): TriageResult {
     risk_score: Math.round(finalScore * 100) / 100,
     risk_label: label,
     details: details.join(". ") + ".",
+    referral: {
+      department: "General Medicine",
+      doctors: []
+    }
   };
 }

@@ -48,8 +48,15 @@ export default function PatientQueue({ patients, selectedId, onSelect }: Props) 
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.3 }}
               onClick={() => onSelect(p)}
-              className={`cursor-pointer rounded-lg border p-3 transition-colors ${
-                selectedId === p.id ? "border-primary bg-primary/5" : "border-border bg-card hover:bg-accent"
+              className={`cursor-pointer rounded-lg border-l-4 p-3 transition-colors ${
+                selectedId === p.id 
+                  ? "bg-primary/5 ring-1 ring-primary/20" 
+                  : "bg-card hover:bg-accent"
+              } ${
+                p.risk_label === "HIGH" ? "border-l-risk-high border-t-border border-r-border border-b-border" :
+                p.risk_label === "MEDIUM" ? "border-l-risk-medium border-t-border border-r-border border-b-border" :
+                p.risk_label === "LOW" ? "border-l-risk-low border-t-border border-r-border border-b-border" :
+                "border-border"
               }`}
             >
               <div className="flex items-center justify-between">

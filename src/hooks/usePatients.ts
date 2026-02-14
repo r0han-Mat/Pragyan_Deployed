@@ -23,11 +23,13 @@ export interface Patient {
   risk_score: number | null;
   risk_label: string | null;
   explanation: string | null;
+  department?: string | null;
   created_at: string;
 }
 
 export function usePatients() {
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [activePatients, setActivePatients] = useState<Patient[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -56,18 +58,39 @@ export function usePatients() {
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
+  // Update active patients every second to auto-discharge after 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      // Keep patients created within the last 30 seconds
+      const thirtySecondsAgo = new Date(now.getTime() - 60 * 1000);
+
+      const active = patients.filter(p => {
+        const createdAt = new Date(p.created_at);
+        return createdAt > thirtySecondsAgo;
+      });
+
+      setActivePatients(active);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [patients]);
+
   const addPatient = async (patient: Omit<Patient, "id" | "user_id" | "created_at">) => {
     if (!user) return null;
+    // Exclude 'department' as it's not in the patients table
+    const { department, ...patientData } = patient;
+
     const { data, error } = await supabase
       .from("patients")
-      .insert({ ...patient, user_id: user.id })
+      .insert({ ...patientData, user_id: user.id })
       .select()
       .single();
     if (error) { console.error("Insert error:", error); return null; }
     return data as Patient;
   };
 
-  return { patients, loading, addPatient, refetch: fetchPatients };
+  return { patients, activePatients, loading, addPatient, refetch: fetchPatients };
 }
 
 function sortByRisk(patients: Patient[]): Patient[] {
