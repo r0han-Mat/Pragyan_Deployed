@@ -39,30 +39,86 @@ export default function Login() {
   };
 
   return (
-    <div
-      className="relative min-h-screen w-full overflow-hidden bg-cover bg-center"
-      style={{ backgroundImage: "url('/login-bg.avif')" }}
-    >
-      {/* Dark + Red Overlay */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+    <div className="relative min-h-screen w-full overflow-hidden bg-black">
 
-      {/* Grid */}
-      <div className="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-2">
+      {/* ECG Animated Background */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+
+        {/* subtle grid */}
+        <div className="absolute inset-0 opacity-[0.08]"
+          style={{
+            backgroundImage: `
+              linear-gradient(to right, #00ff66 1px, transparent 1px),
+              linear-gradient(to bottom, #00ff66 1px, transparent 1px)
+            `,
+            backgroundSize: "60px 60px"
+          }}
+        />
+
+        {/* ECG Line */}
+        <svg
+          className="absolute w-[200%] h-full animate-ecg"
+          viewBox="0 0 2000 400"
+          preserveAspectRatio="none"
+        >
+          <path
+            d="
+              M0 200 
+              L150 200 
+              L180 200 
+              L200 120 
+              L220 280 
+              L240 200 
+              L400 200
+              L430 200 
+              L450 140 
+              L470 260 
+              L490 200 
+              L800 200
+              L830 200 
+              L850 120 
+              L870 280 
+              L890 200 
+              L1200 200
+              L1230 200 
+              L1250 140 
+              L1270 260 
+              L1290 200 
+              L1600 200
+              L1630 200 
+              L1650 120 
+              L1670 280 
+              L1690 200 
+              L2000 200
+            "
+            fill="none"
+            stroke="#00ff66"
+            strokeWidth="3"
+            strokeLinecap="round"
+            className="drop-shadow-[0_0_15px_rgba(0,255,100,0.9)]"
+          />
+        </svg>
+
+      </div>
+
+      {/* dark overlay */}
+      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm z-10" />
+
+      {/* main content */}
+      <div className="relative z-20 grid min-h-screen grid-cols-1 lg:grid-cols-2">
 
         {/* LEFT SIDE */}
         <div className="flex flex-col items-center justify-center px-10">
 
-          {/* Centered Logo */}
           <motion.img
             src="/logo.png"
             alt="PARS Logo"
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7 }}
-            className="h-36 w-auto mb-8 drop-shadow-[0_0_25px_rgba(255,215,0,0.25)]"
+            className="h-36 w-auto mb-8 drop-shadow-[0_0_25px_rgba(255,0,0,0.25)]"
           />
 
-          {/* Left aligned text below */}
           <motion.div
             initial={{ opacity: 0, y: 25 }}
             animate={{ opacity: 1, y: 0 }}
@@ -81,9 +137,9 @@ export default function Login() {
             </p>
 
             <p className="mt-3 text-gray-400 text-sm leading-relaxed">
-              AI-powered real-time medical triage platform designed to assist healthcare
-              professionals in rapid risk evaluation, emergency prioritization,
-              and intelligent clinical decision support.
+A real-time clinical support interface engineered for high-pressure environments. 
+              Leverages predictive analytics to facilitate rapid acuity scoring, dynamic patient 
+              prioritization, and evidence-based care coordination without disrupting clinical workflow.
             </p>
           </motion.div>
 
@@ -101,15 +157,16 @@ export default function Login() {
             <Card
               className="
               bg-black/60
-              border border-yellow-500
+              border border-red-500
               backdrop-blur-xl
-              shadow-[0_0_50px_rgba(255,0,0,0.15)]
+              shadow-[0_0_50px_rgba(0,255,100,0.15)]
               text-white
               rounded-xl
               "
             >
 
               <CardHeader className="text-center pb-2">
+
                 <CardTitle className="text-3xl font-bold text-white">
                   {isSignUp ? "Create Account" : "Secure Login"}
                 </CardTitle>
@@ -119,6 +176,7 @@ export default function Login() {
                     ? "Register to access PARS"
                     : "Sign in to continue"}
                 </CardDescription>
+
               </CardHeader>
 
               <CardContent>
@@ -140,10 +198,9 @@ export default function Login() {
                       className="
                       bg-black/70
                       border border-red-900
-                      focus:border-yellow-500
-                      focus:ring-yellow-500/30
+                      focus:border-red-500
+                      focus:ring-red-500/30
                       text-white
-                      placeholder:text-gray-500
                       "
                     />
                   </div>
@@ -164,8 +221,8 @@ export default function Login() {
                       className="
                       bg-black/70
                       border border-red-900
-                      focus:border-yellow-500
-                      focus:ring-yellow-500/30
+                      focus:border-red-500
+                      focus:ring-red-500/30
                       text-white
                       "
                     />
@@ -181,7 +238,7 @@ export default function Login() {
 
                   {/* SUCCESS */}
                   {message && (
-                    <div className="bg-green-900/30 border border-green-700 text-green-400 p-3 rounded">
+                    <div className="bg-red-900/30 border border-red-700 text-red-400 p-3 rounded">
                       {message}
                     </div>
                   )}
@@ -195,11 +252,10 @@ export default function Login() {
                       w-full
                       bg-red-600
                       hover:bg-red-500
-                      text-white
+                      text-black
                       font-semibold
-                      border border-yellow-500
-                      shadow-[0_0_20px_rgba(255,0,0,0.35)]
-                      transition-all
+                      border border-red-400
+                      shadow-[0_0_20px_rgba(0,255,100,0.35)]
                       "
                     >
                       {loading
@@ -212,6 +268,7 @@ export default function Login() {
 
                   {/* TOGGLE */}
                   <div className="text-center text-gray-400 text-sm pt-2">
+
                     {isSignUp
                       ? "Already registered?"
                       : "New to PARS?"}
@@ -225,13 +282,14 @@ export default function Login() {
                       }}
                       className="
                       ml-2
-                      text-red-500
-                      hover:text-red-400
+                      text-red-400
+                      hover:text-red-300
                       font-semibold
                       "
                     >
                       {isSignUp ? "Login" : "Register"}
                     </button>
+
                   </div>
 
                 </form>
@@ -239,10 +297,31 @@ export default function Login() {
               </CardContent>
 
             </Card>
+
           </motion.div>
 
         </div>
+
       </div>
+
+      {/* ECG animation style */}
+      <style>
+        {`
+        @keyframes ecgMove {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+
+        .animate-ecg {
+          animation: ecgMove 8s linear infinite;
+        }
+        `}
+      </style>
+
     </div>
   );
 }

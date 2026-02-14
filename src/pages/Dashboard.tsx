@@ -7,6 +7,9 @@ import TriageForm from "@/components/TriageForm";
 import RiskPanel from "@/components/RiskPanel";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { 
   LogOut, 
   Shield, 
@@ -14,7 +17,8 @@ import {
   Activity, 
   Stethoscope,
   ChevronRight,
-  Plus
+  Plus,
+  Zap
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -72,12 +76,10 @@ export default function Dashboard() {
         risk_label: triageResult.risk_label,
         explanation: triageResult.details,
       });
-      // Auto-switch to analysis tab on success
       setActiveTab("analysis");
     }
   }, [predict, addPatient]);
 
-  // Live sim logic
   useEffect(() => {
     if (simActive) {
       simRef.current = setInterval(() => {
@@ -96,7 +98,7 @@ export default function Dashboard() {
         risk_label: p.risk_label,
         details: p.explanation || "",
       });
-      setActiveTab("analysis"); // Switch to view
+      setActiveTab("analysis"); 
     }
   };
 
@@ -130,72 +132,112 @@ export default function Dashboard() {
       <div className="flex flex-1 overflow-hidden">
         
         {/* LEFT COLUMN: Patient Queue */}
-        <aside className="w-[320px] lg:w-[380px] flex flex-col border-r border-border bg-card/20 backdrop-blur-sm">
-          <div className="flex items-center justify-between p-4 border-b border-border bg-card/40">
-            <h2 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">
-              <LayoutDashboard className="h-4 w-4" /> Live Queue
-            </h2>
-            <Button size="icon" variant="ghost" onClick={() => setActiveTab("intake")}>
-               <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <PatientQueue
-              patients={patients}
-              selectedId={null} 
-              onSelect={handleSelectPatient}
-              simActive={simActive}
-              onToggleSim={setSimActive}
-            />
-          </div>
-        </aside>
+<aside className="w-[320px] lg:w-[380px] flex flex-col border-r border-border bg-card/20 backdrop-blur-sm">
+
+  {/* HEADER */}
+  <div className="flex items-center justify-between p-4 border-b border-border bg-card/40">
+
+    {/* LEFT GROUP — badge stays close to title */}
+    <div className="flex items-center gap-2">
+      <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
+
+      <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">
+        Patient Record
+      </h2>
+
+      <Badge
+        variant="outline"
+        className="ml-1 border-border text-muted-foreground px-2 py-[2px]"
+      >
+        {patients.length}
+      </Badge>
+    </div>
+
+    {/* RIGHT GROUP — pushed fully to right */}
+    <div className="flex items-center gap-4">
+
+      {/* LIVE SIM */}
+      <div className="flex items-center gap-2 rounded-md border border-border bg-background/50 px-3 py-1.5">
+        <Label
+          htmlFor="sim-mode"
+          className="text-[10px] font-bold uppercase text-muted-foreground cursor-pointer"
+        >
+          Live Sim
+        </Label>
+
+        <Switch
+          id="sim-mode"
+          checked={simActive}
+          onCheckedChange={setSimActive}
+          className="scale-75 data-[state=checked]:bg-green-500"
+        />
+
+        {simActive && (
+          <Zap className="h-3 w-3 animate-pulse text-green-500" />
+        )}
+      </div>
+
+      {/* PLUS BUTTON */}
+      <Button
+        size="icon"
+        variant="ghost"
+        onClick={() => setActiveTab("intake")}
+        className="hover:bg-primary/10 hover:text-primary"
+      >
+        <Plus className="h-5 w-5" />
+      </Button>
+
+    </div>
+
+  </div>
+
+  {/* PATIENT QUEUE */}
+  <div className="flex-1 overflow-hidden">
+    <PatientQueue
+      patients={patients}
+      selectedId={null}
+      onSelect={handleSelectPatient}
+    />
+  </div>
+
+</aside>
 
         {/* RIGHT COLUMN: Work Bench */}
         <main className="flex-1 flex flex-col min-w-0 bg-background/50 relative">
-          {/* Subtle Grid Background */}
           <div className="absolute inset-0 pointer-events-none opacity-[0.03]" 
              style={{ backgroundImage: "radial-gradient(currentColor 1px, transparent 1px)", backgroundSize: "24px 24px" }} 
           />
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full">
-            
-            {/* Tab Navigation */}
             <div className="px-6 lg:px-8 pt-2 pb-2 shrink-0">
               <TabsList className="grid w-full max-w-[400px] grid-cols-2 bg-card/50 border border-border p-1">
                 <TabsTrigger value="intake" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                   <Stethoscope className="mr-2 h-4 w-4" /> Triage Intake
+                 Triage Intake
                 </TabsTrigger>
                 <TabsTrigger value="analysis" disabled={!result} className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                   <Activity className="mr-2 h-4 w-4" /> AI Analysis
+                  Patient Analysis
                 </TabsTrigger>
               </TabsList>
             </div>
 
-            {/* Content Area */}
             <div className="flex-1 overflow-hidden px-4 lg:px-8 pb-4">
               <div className="mx-auto max-w-5xl h-full">
                 
-                {/* 1. INTAKE TAB */}
                 <TabsContent value="intake" className="h-full mt-0 border-0 focus-visible:ring-0 data-[state=active]:flex flex-col">
                   <div className="flex flex-col h-full rounded-2xl border border-border bg-card/40 shadow-xl backdrop-blur-xl transition-all">
-                     {/* Scrollable Form */}
                      <div className="flex-1 overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
                         <TriageForm onSubmit={handleSubmit} loading={loading} />
                      </div>
                   </div>
                 </TabsContent>
 
-                {/* 2. ANALYSIS TAB */}
                 <TabsContent value="analysis" className="h-full mt-0 border-0 focus-visible:ring-0 data-[state=active]:flex flex-col">
                   <div className="flex flex-col h-full rounded-2xl border border-border bg-card/40 shadow-xl overflow-hidden backdrop-blur-xl transition-all">
-                     
-                     {/* Risk Panel Container - Fits Parent Height, Internal Scroll */}
                      <div className="flex-1 overflow-hidden relative">
-                        {/* We use 'absolute inset-0' to force RiskPanel's ScrollArea to take available height */}
                         <div className="absolute inset-0">
                            <RiskPanel result={result} patients={patients} apiError={error} />
                         </div>
-                     </div>   
+                     </div>
                   </div>
                 </TabsContent>
 

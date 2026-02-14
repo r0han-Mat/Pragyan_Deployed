@@ -279,8 +279,8 @@ export default function RiskPanel({ result, patients, apiError }: Props) {
                     {availableSpecialists.length > 0 ? (
                        availableSpecialists.map((doc, idx) => {
                          const isRecommended = doc.name === bestSpecialist?.name;
-                         // Show only top 2 doctors to save space in preview
-                         if (!isRecommended && idx > 0) return null; 
+                         // Show all available doctors in the list
+                         // if (!isRecommended && idx > 0) return null; 
 
                          return (
                            <div 
