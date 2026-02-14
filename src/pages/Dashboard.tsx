@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePatients, Patient } from "@/hooks/usePatients";
 import { useTriage, PatientInput } from "@/hooks/useTriage";
@@ -10,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import AdminStats from "@/components/AdminStats";
 import { 
   LogOut, 
   Shield, 
@@ -46,17 +49,20 @@ function randomPatientInput(): PatientInput & { name: string } {
 
 export default function Dashboard() {
   const { user, signOut } = useAuth();
-  const { patients, addPatient } = usePatients();
+  const { activePatients, patients, addPatient } = usePatients();
   const { predict, loading, error, result, setResult } = useTriage();
   
   const [activeTab, setActiveTab] = useState("intake");
   const [simActive, setSimActive] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
   const simRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleSubmit = useCallback(async (data: PatientInput & { name: string }) => {
     const triageResult = await predict(data);
+    
     if (triageResult) {
-      await addPatient({
+      // 1. Add to Active Queue (Visual Feedback)
+      const newPatient = await addPatient({
         name: data.name,
         age: data.Age,
         gender: data.Gender,
@@ -75,11 +81,59 @@ export default function Dashboard() {
         risk_score: triageResult.risk_score,
         risk_label: triageResult.risk_label,
         explanation: triageResult.details,
+        department: triageResult.referral?.department,
       });
+
+      // 2. Initial Toast
+      toast.success(`Patient ${data.name} triaged successfully`, {
+        description: `Risk Level: ${triageResult.risk_label} | Waiting for diagnosis...`,
+        duration: 3000,
+      });
+
       setActiveTab("analysis");
+
+      if (newPatient) {
+        const rawDept = triageResult.referral?.department || "General Medicine";
+        const departmentName = rawDept.replace(/_/g, " ");
+
+        // 3. IMMEDIATE: Record to 'patient_assignments' for Admin Graph
+        // We do this immediately so the chart updates while the patient is still in the queue.
+        try {
+           const { error: assignError } = await supabase.from("patient_assignments").insert({
+             patient_id: newPatient.id,
+             patient_name: data.name,
+             department: rawDept,
+             doctor_name: "Assigned via Triage", 
+           });
+           
+           if (assignError) {
+             console.error("Graph Sync Error:", assignError);
+           } else {
+             console.log("Analytics updated immediately.");
+           }
+        } catch (err) {
+           console.error("Failed to update analytics:", err);
+        }
+
+        // 4. DELAYED: Exit Toast (Simulating time passed in queue)
+        // This simulates the patient being "processed" and leaving the active view
+        setTimeout(() => {
+          console.log("[Dashboard] Patient discharged:", data.name);
+
+          toast.success(`Patient ${data.name} has been successfully diagnosed`, {
+            description: `Sent to ${departmentName} & Removed from Queue`,
+            duration: 20000,
+            icon: <div className="bg-green-500 rounded-full p-1"><Stethoscope size={12} className="text-white" /></div>
+          });
+          
+          // Note: The actual removal from 'activePatients' is handled by the usePatients hook 
+          // or Realtime subscription automatically. We just provide the notification here.
+        }, 10000); // Reduced to 10s for better demo flow (was 30s)
+      }
     }
   }, [predict, addPatient]);
 
+  // Live sim logic
   useEffect(() => {
     if (simActive) {
       simRef.current = setInterval(() => {
@@ -103,12 +157,12 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-background text-foreground font-sans selection:bg-primary/20">
+    <div className="flex h-screen flex-col text-foreground font-sans selection:bg-primary/20 p-4 gap-4 overflow-hidden">
       
-      {/* 1. Header */}
-      <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card/50 px-6 backdrop-blur-md">
+      {/* 1. Header - Floating Glass */}
+      <header className="flex h-16 shrink-0 items-center justify-between rounded-2xl border border-[#D4AF37]/50 bg-card/30 px-6 backdrop-blur-md shadow-lg">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary shadow-inner">
             <Shield className="h-6 w-6" />
           </div>
           <div>
@@ -117,127 +171,134 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-           <div className="hidden md:flex flex-col items-end border-r border-border pr-4">
-              <span className="text-sm font-semibold">{user?.email?.split('@')[0]}</span>
-              <span className="text-[10px] text-muted-foreground uppercase">On Duty</span>
-           </div>
-           <Button variant="ghost" size="icon" onClick={signOut} className="text-muted-foreground hover:text-destructive transition-colors">
-             <LogOut className="h-5 w-5" />
-           </Button>
+        <div className="flex items-center gap-6">
+          <div className="hidden md:flex flex-col items-end border-r border-border pr-4">
+            <span className="text-sm font-semibold">{user?.email?.split('@')[0]}</span>
+            <span className="text-[10px] text-muted-foreground uppercase">On Duty</span>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowAdmin(true)}
+            className="hidden md:flex gap-2 border-primary/20 text-primary hover:bg-primary/10"
+          >
+            <LayoutDashboard className="h-4 w-4" />
+            Admin
+          </Button>
+          <Button variant="ghost" size="icon" onClick={signOut} className="text-muted-foreground hover:text-destructive transition-colors">
+            <LogOut className="h-5 w-5" />
+          </Button>
         </div>
       </header>
 
       {/* 2. Main Workspace */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 gap-4 overflow-hidden">
         
-        {/* LEFT COLUMN: Patient Queue */}
-<aside className="w-[320px] lg:w-[380px] flex flex-col border-r border-border bg-card/20 backdrop-blur-sm">
+        {/* LEFT COLUMN: Patient Queue - Floating Glass */}
+        <aside className="w-[320px] lg:w-[380px] flex flex-col rounded-2xl border border-[#D4AF37]/50 bg-card/30 backdrop-blur-md shadow-lg overflow-hidden">
 
-  {/* HEADER */}
-  <div className="flex items-center justify-between p-4 border-b border-border bg-card/40">
+          {/* HEADER */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-card/40">
 
-    {/* LEFT GROUP — badge stays close to title */}
-    <div className="flex items-center gap-2">
-      <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
+            {/* LEFT GROUP — badge stays close to title */}
+            <div className="flex items-center gap-2">
+              <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
 
-      <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">
-        Patient Record
-      </h2>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">
+                Patient Record
+              </h2>
 
-      <Badge
-        variant="outline"
-        className="ml-1 border-border text-muted-foreground px-2 py-[2px]"
-      >
-        {patients.length}
-      </Badge>
-    </div>
+              <Badge
+                variant="outline"
+                className="ml-1 border-white/10 text-muted-foreground px-2 py-[2px] bg-black/20"
+              >
+                {activePatients.length}
+              </Badge>
+            </div>
 
-    {/* RIGHT GROUP — pushed fully to right */}
-    <div className="flex items-center gap-4">
+            {/* RIGHT GROUP — pushed fully to right */}
+            <div className="flex items-center gap-4">
 
-      {/* LIVE SIM */}
-      <div className="flex items-center gap-2 rounded-md border border-border bg-background/50 px-3 py-1.5">
-        <Label
-          htmlFor="sim-mode"
-          className="text-[10px] font-bold uppercase text-muted-foreground cursor-pointer"
-        >
-          Live Sim
-        </Label>
+              {/* LIVE SIM */}
+              <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/20 px-3 py-1.5">
+                <Label
+                  htmlFor="sim-mode"
+                  className="text-[10px] font-bold uppercase text-muted-foreground cursor-pointer"
+                >
+                  Live Sim
+                </Label>
 
-        <Switch
-          id="sim-mode"
-          checked={simActive}
-          onCheckedChange={setSimActive}
-          className="scale-75 data-[state=checked]:bg-green-500"
-        />
+                <Switch
+                  id="sim-mode"
+                  checked={simActive}
+                  onCheckedChange={setSimActive}
+                  className="scale-75 data-[state=checked]:bg-green-500"
+                />
 
-        {simActive && (
-          <Zap className="h-3 w-3 animate-pulse text-green-500" />
-        )}
-      </div>
+                {simActive && (
+                  <Zap className="h-3 w-3 animate-pulse text-green-500" />
+                )}
+              </div>
 
-      {/* PLUS BUTTON */}
-      <Button
-        size="icon"
-        variant="ghost"
-        onClick={() => setActiveTab("intake")}
-        className="hover:bg-primary/10 hover:text-primary"
-      >
-        <Plus className="h-5 w-5" />
-      </Button>
+              {/* PLUS BUTTON */}
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setActiveTab("intake")}
+                className="hover:bg-primary/20 hover:text-primary rounded-lg"
+              >
+                <Plus className="h-5 w-5" />
+              </Button>
 
-    </div>
+            </div>
 
-  </div>
+          </div>
 
-  {/* PATIENT QUEUE */}
-  <div className="flex-1 overflow-hidden">
-    <PatientQueue
-      patients={patients}
-      selectedId={null}
-      onSelect={handleSelectPatient}
-    />
-  </div>
+          {/* PATIENT QUEUE */}
+          <div className="flex-1 overflow-hidden">
+            <PatientQueue
+              patients={activePatients}
+              selectedId={null}
+              onSelect={handleSelectPatient}
+            />
+          </div>
 
-</aside>
+        </aside>
 
         {/* RIGHT COLUMN: Work Bench */}
-        <main className="flex-1 flex flex-col min-w-0 bg-background/50 relative">
-          <div className="absolute inset-0 pointer-events-none opacity-[0.03]" 
-             style={{ backgroundImage: "radial-gradient(currentColor 1px, transparent 1px)", backgroundSize: "24px 24px" }} 
-          />
-
+        <main className="flex-1 flex flex-col min-w-0 relative rounded-2xl overflow-hidden">
+          {/* Transparent container for tabs */}
+          
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full">
-            <div className="px-6 lg:px-8 pt-2 pb-2 shrink-0">
-              <TabsList className="grid w-full max-w-[400px] grid-cols-2 bg-card/50 border border-border p-1">
-                <TabsTrigger value="intake" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <div className="pb-4 shrink-0">
+              <TabsList className="grid w-full max-w-[400px] grid-cols-2 bg-card/30 border border-[#D4AF37]/50 backdrop-blur-md rounded-xl p-1">
+                <TabsTrigger value="intake" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all">
                  Triage Intake
                 </TabsTrigger>
-                <TabsTrigger value="analysis" disabled={!result} className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <TabsTrigger value="analysis" disabled={!result} className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all">
                   Patient Analysis
                 </TabsTrigger>
               </TabsList>
             </div>
 
-            <div className="flex-1 overflow-hidden px-4 lg:px-8 pb-4">
-              <div className="mx-auto max-w-5xl h-full">
+            <div className="flex-1 overflow-hidden">
+              <div className="h-full">
                 
                 <TabsContent value="intake" className="h-full mt-0 border-0 focus-visible:ring-0 data-[state=active]:flex flex-col">
-                  <div className="flex flex-col h-full rounded-2xl border border-border bg-card/40 shadow-xl backdrop-blur-xl transition-all">
-                     <div className="flex-1 overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+                  <div className="flex flex-col h-full rounded-2xl border border-[#D4AF37]/50 bg-card/30 shadow-xl backdrop-blur-md transition-all">
+                      <div className="flex-1 overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent rounded-2xl">
                         <TriageForm onSubmit={handleSubmit} loading={loading} />
-                     </div>
+                      </div>
                   </div>
                 </TabsContent>
 
                 <TabsContent value="analysis" className="h-full mt-0 border-0 focus-visible:ring-0 data-[state=active]:flex flex-col">
-                  <div className="flex flex-col h-full rounded-2xl border border-border bg-card/40 shadow-xl overflow-hidden backdrop-blur-xl transition-all">
-                     <div className="flex-1 overflow-hidden relative">
+                  <div className="flex flex-col h-full rounded-2xl border border-[#D4AF37]/50 bg-card/30 shadow-xl overflow-hidden backdrop-blur-md transition-all">
+                      <div className="flex-1 overflow-hidden relative rounded-2xl">
                         <div className="absolute inset-0">
                            <RiskPanel result={result} patients={patients} apiError={error} />
                         </div>
-                     </div>
+                      </div>
                   </div>
                 </TabsContent>
 
@@ -248,6 +309,10 @@ export default function Dashboard() {
       </div>
 
       <Footer />
+      {/* Admin Overlay */}
+      {showAdmin && (
+        <AdminStats patients={patients} onClose={() => setShowAdmin(false)} />
+      )}
     </div>
   );
 }
