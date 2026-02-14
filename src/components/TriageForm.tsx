@@ -30,6 +30,7 @@ const INITIAL: PatientInput & { name: string } = {
   Diabetes: false,
   Hypertension: false,
   Heart_Disease: false,
+  Chief_Complaint: "",
 };
 
 export default function TriageForm({ onSubmit, loading }: Props) {
@@ -138,6 +139,17 @@ export default function TriageForm({ onSubmit, loading }: Props) {
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
             className="border-border bg-secondary text-foreground"
+          />
+        </div>
+
+        {/* Chief Complaint */}
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Chief Complaint (Optional)</Label>
+          <Input 
+            value={form.Chief_Complaint || ""} 
+            onChange={(e) => set("Chief_Complaint", e.target.value)} 
+            placeholder="e.g. Chest pain radiating to left arm..."
+            className="border-border bg-secondary text-foreground placeholder:text-muted-foreground/50" 
           />
         </div>
 

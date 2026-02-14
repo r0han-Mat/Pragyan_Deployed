@@ -17,12 +17,25 @@ export interface PatientInput {
   Diabetes: boolean;
   Hypertension: boolean;
   Heart_Disease: boolean;
+  Chief_Complaint?: string;
+}
+
+export interface Doctor {
+  name: string;
+  experience: number;
+  available: boolean;
+}
+
+export interface ReferralData {
+  department: string;
+  doctors: Doctor[];
 }
 
 export interface TriageResult {
   risk_score: number;
   risk_label: string;
   details: string;
+  referral?: ReferralData;
 }
 
 export function useTriage() {

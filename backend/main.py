@@ -7,9 +7,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
+from typing import Optional, List, Dict, Any
 from ml_service import TriageModel
 from fastapi import FastAPI, UploadFile, File
 from doc_parser import extract_vitals_from_pdf
+from dept_service import get_referral
 
 app = FastAPI(title="PARS Triage API", version="1.0.0")
 
@@ -53,12 +55,14 @@ class PatientInput(BaseModel):
     Diabetes: bool = False
     Hypertension: bool = False
     Heart_Disease: bool = False
+    Chief_Complaint: Optional[str] = None
 
 
 class TriageResponse(BaseModel):
     risk_score: float
     risk_label: str
     details: str
+    referral: Optional[Dict[str, Any]] = None
 
 
 @app.get("/")
@@ -71,7 +75,19 @@ def predict(patient: PatientInput):
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded. Place model files in backend/ directory.")
 
+    # 1. Get ML Prediction & Risk Analysis
     result = model.predict(patient.dict())
+    
+    # 2. Determine Referral Logic
+    # Use Chief Complaint if provided, otherwise fallback to the generated "details" (Why?)
+    referral_reason = patient.Chief_Complaint if patient.Chief_Complaint else result["details"]
+    
+    # 3. Get Department & Doctor List
+    referral_data = get_referral(referral_reason)
+    
+    # 4. Merge Results
+    result["referral"] = referral_data
+    
     return result
 
 @app.post("/parse-document")

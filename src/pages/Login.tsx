@@ -44,7 +44,7 @@ export default function Login() {
       style={{ backgroundImage: "url('/login-bg.avif')" }}
     >
       {/* Dark + Red Overlay */}
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       {/* Grid */}
       <div className="relative z-10 grid min-h-screen grid-cols-1 lg:grid-cols-2">

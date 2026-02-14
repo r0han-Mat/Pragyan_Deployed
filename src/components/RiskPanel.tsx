@@ -1,8 +1,16 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { AlertTriangle, TrendingUp, Info } from "lucide-react";
+import { AlertTriangle, TrendingUp, Info, UserRound, CheckCircle2, XCircle } from "lucide-react";
 import { TriageResult } from "@/hooks/useTriage";
 import { Patient } from "@/hooks/usePatients";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Props {
   result: TriageResult | null;
@@ -20,6 +28,15 @@ function gaugeColor(label: string) {
 }
 
 export default function RiskPanel({ result, patients, apiError }: Props) {
+  const [showReferral, setShowReferral] = useState(false);
+
+  // Open dialog when a NEW result with referral arrives
+  useEffect(() => {
+    if (result?.referral) {
+      setShowReferral(true);
+    }
+  }, [result]);
+
   const high = patients.filter((p) => p.risk_label === "HIGH").length;
   const medium = patients.filter((p) => p.risk_label === "MEDIUM").length;
   const low = patients.filter((p) => p.risk_label === "LOW").length;
@@ -139,6 +156,65 @@ export default function RiskPanel({ result, patients, apiError }: Props) {
           </div>
         )}
       </div>
+
+      {/* REFERRAL DIALOG */}
+      <Dialog open={showReferral} onOpenChange={setShowReferral}>
+        <DialogContent className="sm:max-w-md border-yellow-500/50 bg-background/95 backdrop-blur-xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-foreground">
+               Referral Recommended
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Based on the analysis, the patient is referred to:
+            </DialogDescription>
+          </DialogHeader>
+
+          {result?.referral && (
+            <div className="space-y-4">
+              {/* Department Name */}
+              <div className="rounded-lg border border-primary/20 bg-primary/10 p-4 text-center">
+                <h3 className="text-2xl font-bold text-primary tracking-wide">
+                  {result.referral.department.replace("_", " ")}
+                </h3>
+              </div>
+
+              {/* Doctor List */}
+              <div className="space-y-2">
+                 <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                    <UserRound size={16} /> Available Specialists
+                 </h4>
+                 <div className="max-h-[200px] overflow-y-auto rounded-md border border-border bg-secondary/50 p-2">
+                    {result.referral.doctors.length > 0 ? (
+                        <div className="space-y-2">
+                           {result.referral.doctors.map((doc, idx) => (
+                              <div key={idx} className="flex items-center justify-between rounded-md bg-background/50 p-2 text-sm shadow-sm transition-colors hover:bg-background">
+                                 <div>
+                                    <div className="font-medium text-foreground">{doc.name}</div>
+                                    <div className="text-xs text-muted-foreground">{doc.experience} years experience</div>
+                                 </div>
+                                 {doc.available ? (
+                                    <div className="flex items-center gap-1 text-xs font-medium text-green-500">
+                                       <CheckCircle2 size={14} /> Available
+                                    </div>
+                                 ) : (
+                                     <div className="flex items-center gap-1 text-xs font-medium text-red-500">
+                                       <XCircle size={14} /> Busy
+                                    </div>
+                                 )}
+                              </div>
+                           ))}
+                        </div>
+                    ) : (
+                        <p className="text-center text-xs text-muted-foreground py-4">
+                           No doctors currently available in this department.
+                        </p>
+                    )}
+                 </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
