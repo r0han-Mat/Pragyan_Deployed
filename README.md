@@ -1,9 +1,4 @@
 # Project Title: AI-Powered Smart Patient Triage System (Hackathon Winner)
-
-I need you to build a full-stack, "medical-grade" web application for a hospital triage system. The goal is to help doctors prioritize patients using AI. 
-
-The app must be modern, highly responsive, and include a "Live Queue" simulation.
-
 ## 1. Tech Stack
 - **Frontend:** React (Vite), Tailwind CSS, Framer Motion (for smooth animations), Lucide React (icons), Recharts (for risk charts).
 - **Backend:** Python FastAPI (standard for ML integration).
