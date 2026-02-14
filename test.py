@@ -24,22 +24,23 @@ except Exception as e:
 
 # 2. DEFINE THE TEST PATIENT
 # Scenario: Extreme Heart Rate (220) but other vitals might be confusing the model
+# SCENARIO: Suspected Heart Attack (Myocardial Infarction) -> HIGH RISK
 new_patient = {
-    'Age': 52,                  # Middle-aged
-    'Gender': 'Female',
-    'BMI': 29.5,
-    'Heart_Rate': 112,          # Tachycardia (Elevated, but safe from override)
-    'Systolic_BP': 155,         # Hypertensive (High, but stable)
+    'Age': 68,                  # Elderly
+    'Gender': 'Male',
+    'BMI': 32.0,
+    'Heart_Rate': 115,          # Tachycardia
+    'Systolic_BP': 160,         # Hypertensive urgency
     'Diastolic_BP': 95,
-    'O2_Saturation': 94,        # Mild Hypoxia (Needs oxygen, but not ICU)
-    'Temp': 38.6,               # Significant Fever
-    'Respiratory_Rate': 24,     # Breathing fast
-    'Pain_Score': 6,            # Moderate Pain
-    'GCS_Score': 15,            # Fully Alert (Crucial for Medium)
+    'O2_Saturation': 94,        # Borderline
+    'Temp': 36.5,               # Normal temp (Cold sweat?)
+    'Respiratory_Rate': 28,     # Distress
+    'Pain_Score': 9,            # Severe Chest Pain
+    'GCS_Score': 15,            
     'History_Diabetes': 1,
     'History_Hypertension': 1,
-    'History_Heart_Disease': 0,
-    'Arrival_Mode': 'Walk-in',  # Walk-ins are usually lower risk than Ambulance
+    'History_Heart_Disease': 1, # Previous heart issues
+    'Arrival_Mode': 'Ambulance',
 }
 
 # 3. PREPROCESS
@@ -69,7 +70,7 @@ except Exception as e:
 # --- STEP A: AI PREDICTION ---
 # The NN outputs a number between 0.0 and 1.0
 try:
-    ai_risk_score = model.predict(input_transformed, verbose=0)[0][0]
+    ai_risk_score = float(model.predict(input_transformed, verbose=0)[0][0])
 except Exception as e:
     print(f"Prediction Error: {e}")
     exit()

@@ -5,7 +5,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.metrics import r2_score, mean_absolute_error
-from keras import models, layers, callbacks
+import tensorflow as tf
+from tensorflow.keras import models, layers, callbacks
 import joblib
 
 # 1. Load Data
@@ -52,25 +53,14 @@ model = models.Sequential()
 
 # --- Input Layer ---
 model.add(layers.Dense(64, activation='relu', input_dim=X_train_scaled.shape[1]))
-
 # --- Hidden Layers with Dropout ---
 model.add(layers.Dropout(0.2)) # Randomly drop 20% of neurons to prevent overfitting
+model.add(layers.Dense(64, activation='tanh'))
+model.add(layers.Dropout(0.3))
+model.add(layers.Dense(64, activation='tanh'))
+model.add(layers.Dropout(0.3)) # Randomly drop 20% of neurons to prevent overfitting
 model.add(layers.Dense(32, activation='relu'))
 model.add(layers.Dropout(0.2))
-
-# --- Input Layer ---
-model.add(layers.Dense(32, activation='tanh', input_dim=X_train_scaled.shape[1]))
-
-# --- Hidden Layers with Dropout ---
-model.add(layers.Dropout(0.2)) # Randomly drop 20% of neurons to prevent overfitting
-model.add(layers.Dense(32, activation='relu'))
-model.add(layers.Dropout(0.2))
-
-# --- Input Layer ---
-model.add(layers.Dense(64, activation='relu', input_dim=X_train_scaled.shape[1]))
-
-# --- Hidden Layers with Dropout ---
-model.add(layers.Dropout(0.2)) # Randomly drop 20% of neurons to prevent overfitting
 model.add(layers.Dense(32, activation='relu'))
 model.add(layers.Dropout(0.2))
 
@@ -87,7 +77,7 @@ model.add(layers.Dense(1, activation='sigmoid'))
 model.compile(
     optimizer='adam',
     loss='mean_squared_error',  # Standard loss for regression
-    metrics=['mae']             # Mean Absolute Error (easy to interpret)
+    metrics=['mae']             # Mean Squared Error 
 )
 
 # ==============================================================================
