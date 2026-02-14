@@ -139,7 +139,7 @@ export default function TriageForm({ onSubmit, loading }: Props) {
 
         {/* Chief Complaint */}
         <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Chief Complaint (Optional)</Label>
+          <Label className="text-xs text-muted-foreground">Chief Complaint / Symptoms (Optional)</Label>
           <Input 
             value={form.Chief_Complaint || ""} 
             onChange={(e) => set("Chief_Complaint", e.target.value)} 
@@ -263,7 +263,7 @@ export default function TriageForm({ onSubmit, loading }: Props) {
             className="w-full animate-pulse-glow bg-primary py-6 text-lg font-bold text-primary-foreground hover:bg-primary/80"
           >
             {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-            {loading ? "ANALYZING..." : "⚡ ANALYZE RISK"}
+            {loading ? "ANALYZING..." : " ANALYZE"}
           </Button>
         </motion.div>
       </form>

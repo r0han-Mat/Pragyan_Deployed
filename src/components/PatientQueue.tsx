@@ -1,16 +1,11 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Activity, Clock, Zap } from "lucide-react";
+import { Activity, Clock } from "lucide-react";
 import { Patient } from "@/hooks/usePatients";
 
 interface Props {
   patients: Patient[];
   selectedId: string | null;
   onSelect: (p: Patient) => void;
-  simActive: boolean;
-  onToggleSim: (v: boolean) => void;
 }
 
 function riskColor(label: string | null) {
@@ -22,25 +17,10 @@ function riskColor(label: string | null) {
   }
 }
 
-export default function PatientQueue({ patients, selectedId, onSelect, simActive, onToggleSim }: Props) {
+export default function PatientQueue({ patients, selectedId, onSelect }: Props) {
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b border-border p-4">
-        <div className="flex items-center gap-2">
-          <Activity className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-bold text-foreground">Triage Queue</h2>
-          <Badge variant="outline" className="border-border text-muted-foreground">
-            {patients.length}
-          </Badge>
-        </div>
-        <div className="flex items-center gap-2">
-          <Label htmlFor="sim" className="text-xs text-muted-foreground">Live Sim</Label>
-          <Switch id="sim" checked={simActive} onCheckedChange={onToggleSim} />
-          {simActive && <Zap className="h-4 w-4 animate-pulse text-risk-medium" />}
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto p-2 space-y-1">
+      <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
         <AnimatePresence mode="popLayout">
           {patients.map((p) => (
             <motion.div
