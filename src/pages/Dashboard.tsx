@@ -17,9 +17,7 @@ import {
   LogOut, 
   Shield, 
   LayoutDashboard, 
-  Activity, 
   Stethoscope,
-  ChevronRight,
   Plus,
   Zap
 } from "lucide-react";
@@ -55,13 +53,64 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("intake");
   const [simActive, setSimActive] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  
+  // Refs for logic
+  const simActiveRef = useRef(false);
   const simRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevActivePatients = useRef<Patient[]>([]); // Track queue state
 
-  const handleSubmit = useCallback(async (data: PatientInput & { name: string }) => {
+  // Sync sim state to ref
+  useEffect(() => {
+    simActiveRef.current = simActive;
+  }, [simActive]);
+
+  // ------------------------------------------------------------------
+  // 1. QUEUE MONITORING EFFECT (Handles Exit Toasts)
+  // ------------------------------------------------------------------
+  useEffect(() => {
+    // Detect who left the queue since the last render
+    const removedPatients = prevActivePatients.current.filter(
+      (prev) => !activePatients.some((curr) => curr.id === prev.id)
+    );
+
+    removedPatients.forEach((patient) => {
+      // Safety Check: Sometimes an ID changes from 'temp' to 'real' during sync.
+      // We check if a patient with the same name exists to avoid a false "Exit" toast.
+      const isJustIdSwap = activePatients.some((curr) => curr.name === patient.name);
+
+      if (!isJustIdSwap) {
+        // ACTUAL DISCHARGE EVENT
+        const departmentName = patient.department?.replace(/_/g, " ") || "General Medicine";
+        
+        console.log("[Queue] Patient Discharged:", patient.name);
+        
+        toast.success(`Patient ${patient.name} Processed`, {
+          description: `successfully got treated & Removed from Queue`,
+          duration: 4000,
+          icon: <div className="bg-green-500 rounded-full p-1"><Stethoscope size={12} className="text-white" /></div>
+        });
+      }
+    });
+
+    // Update ref for next comparison
+    prevActivePatients.current = activePatients;
+  }, [activePatients]);
+
+
+  // ------------------------------------------------------------------
+  // 2. SUBMISSION LOGIC
+  // ------------------------------------------------------------------
+  const handleSubmit = useCallback(async (data: PatientInput & { name: string }, isAuto: boolean = false) => {
+    
+    // Guard: Stop if sim was toggled off during an async cycle
+    if (isAuto && !simActiveRef.current) return;
+
     const triageResult = await predict(data);
     
+    if (isAuto && !simActiveRef.current) return;
+
     if (triageResult) {
-      // 1. Add to Active Queue (Visual Feedback)
+      // Add to Queue (Hook handles logic)
       const newPatient = await addPatient({
         name: data.name,
         age: data.Age,
@@ -84,63 +133,48 @@ export default function Dashboard() {
         department: triageResult.referral?.department,
       });
 
-      // 2. Initial Toast
-      toast.success(`Patient ${data.name} triaged successfully`, {
-        description: `Risk Level: ${triageResult.risk_label} | Waiting for diagnosis...`,
+      // Entry Toast
+      toast.success(`${isAuto ? '🤖 [SIM]' : '✅'} Patient ${data.name} Triaged`, {
+        description: `Risk: ${triageResult.risk_label} | Assigned to Queue`,
         duration: 3000,
       });
 
-      setActiveTab("analysis");
+      if (!isAuto) setActiveTab("analysis");
 
+      // Immediate Analytics Record (For Graph)
       if (newPatient) {
         const rawDept = triageResult.referral?.department || "General Medicine";
-        const departmentName = rawDept.replace(/_/g, " ");
-
-        // 3. IMMEDIATE: Record to 'patient_assignments' for Admin Graph
-        // We do this immediately so the chart updates while the patient is still in the queue.
         try {
-           const { error: assignError } = await supabase.from("patient_assignments").insert({
+           await supabase.from("patient_assignments").insert({
              patient_id: newPatient.id,
              patient_name: data.name,
              department: rawDept,
              doctor_name: "Assigned via Triage", 
            });
-           
-           if (assignError) {
-             console.error("Graph Sync Error:", assignError);
-           } else {
-             console.log("Analytics updated immediately.");
-           }
         } catch (err) {
-           console.error("Failed to update analytics:", err);
+           console.error("Analytics Error:", err);
         }
-
-        // 4. DELAYED: Exit Toast (Simulating time passed in queue)
-        // This simulates the patient being "processed" and leaving the active view
-        setTimeout(() => {
-          console.log("[Dashboard] Patient discharged:", data.name);
-
-          toast.success(`Patient ${data.name} has been successfully diagnosed`, {
-            description: `Sent to ${departmentName} & Removed from Queue`,
-            duration: 20000,
-            icon: <div className="bg-green-500 rounded-full p-1"><Stethoscope size={12} className="text-white" /></div>
-          });
-          
-          // Note: The actual removal from 'activePatients' is handled by the usePatients hook 
-          // or Realtime subscription automatically. We just provide the notification here.
-        }, 10000); // Reduced to 10s for better demo flow (was 30s)
+        // Removed the setTimeout here. The useEffect above handles the exit toast now.
       }
     }
   }, [predict, addPatient]);
 
-  // Live sim logic
+  // ------------------------------------------------------------------
+  // 3. SIMULATION LOOP
+  // ------------------------------------------------------------------
   useEffect(() => {
     if (simActive) {
+      handleSubmit(randomPatientInput(), true);
       simRef.current = setInterval(() => {
-        handleSubmit(randomPatientInput());
+        if (simActiveRef.current) {
+            handleSubmit(randomPatientInput(), true);
+        }
       }, 5000);
     } else {
-      if (simRef.current) clearInterval(simRef.current);
+      if (simRef.current) {
+        clearInterval(simRef.current);
+        simRef.current = null;
+      }
     }
     return () => { if (simRef.current) clearInterval(simRef.current); };
   }, [simActive, handleSubmit]);
@@ -159,7 +193,7 @@ export default function Dashboard() {
   return (
     <div className="flex h-screen flex-col text-foreground font-sans selection:bg-primary/20 p-4 gap-4 overflow-hidden">
       
-      {/* 1. Header - Floating Glass */}
+      {/* Header */}
       <header className="flex h-16 shrink-0 items-center justify-between rounded-2xl border border-[#D4AF37]/50 bg-card/30 px-6 backdrop-blur-md shadow-lg">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary shadow-inner">
@@ -191,56 +225,33 @@ export default function Dashboard() {
         </div>
       </header>
 
-      {/* 2. Main Workspace */}
+      {/* Main Workspace */}
       <div className="flex flex-1 gap-4 overflow-hidden">
         
-        {/* LEFT COLUMN: Patient Queue - Floating Glass */}
+        {/* LEFT COLUMN: Queue */}
         <aside className="w-[320px] lg:w-[380px] flex flex-col rounded-2xl border border-[#D4AF37]/50 bg-card/30 backdrop-blur-md shadow-lg overflow-hidden">
-
-          {/* HEADER */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-card/40">
-
-            {/* LEFT GROUP — badge stays close to title */}
             <div className="flex items-center gap-2">
               <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
-
-              <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">
-                Patient Record
-              </h2>
-
-              <Badge
-                variant="outline"
-                className="ml-1 border-white/10 text-muted-foreground px-2 py-[2px] bg-black/20"
-              >
+              <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Patient Record</h2>
+              <Badge variant="outline" className="ml-1 border-white/10 text-muted-foreground px-2 py-[2px] bg-black/20">
                 {activePatients.length}
               </Badge>
             </div>
 
-            {/* RIGHT GROUP — pushed fully to right */}
             <div className="flex items-center gap-4">
-
-              {/* LIVE SIM */}
               <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/20 px-3 py-1.5">
-                <Label
-                  htmlFor="sim-mode"
-                  className="text-[10px] font-bold uppercase text-muted-foreground cursor-pointer"
-                >
+                <Label htmlFor="sim-mode" className="text-[10px] font-bold uppercase text-muted-foreground cursor-pointer">
                   Live Sim
                 </Label>
-
                 <Switch
                   id="sim-mode"
                   checked={simActive}
                   onCheckedChange={setSimActive}
                   className="scale-75 data-[state=checked]:bg-green-500"
                 />
-
-                {simActive && (
-                  <Zap className="h-3 w-3 animate-pulse text-green-500" />
-                )}
+                {simActive && <Zap className="h-3 w-3 animate-pulse text-green-500" />}
               </div>
-
-              {/* PLUS BUTTON */}
               <Button
                 size="icon"
                 variant="ghost"
@@ -249,12 +260,9 @@ export default function Dashboard() {
               >
                 <Plus className="h-5 w-5" />
               </Button>
-
             </div>
-
           </div>
 
-          {/* PATIENT QUEUE */}
           <div className="flex-1 overflow-hidden">
             <PatientQueue
               patients={activePatients}
@@ -262,13 +270,10 @@ export default function Dashboard() {
               onSelect={handleSelectPatient}
             />
           </div>
-
         </aside>
 
-        {/* RIGHT COLUMN: Work Bench */}
+        {/* RIGHT COLUMN: Workbench */}
         <main className="flex-1 flex flex-col min-w-0 relative rounded-2xl overflow-hidden">
-          {/* Transparent container for tabs */}
-          
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col h-full">
             <div className="pb-4 shrink-0">
               <TabsList className="grid w-full max-w-[400px] grid-cols-2 bg-card/30 border border-[#D4AF37]/50 backdrop-blur-md rounded-xl p-1">
@@ -283,11 +288,10 @@ export default function Dashboard() {
 
             <div className="flex-1 overflow-hidden">
               <div className="h-full">
-                
                 <TabsContent value="intake" className="h-full mt-0 border-0 focus-visible:ring-0 data-[state=active]:flex flex-col">
                   <div className="flex flex-col h-full rounded-2xl border border-[#D4AF37]/50 bg-card/30 shadow-xl backdrop-blur-md transition-all">
                       <div className="flex-1 overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent rounded-2xl">
-                        <TriageForm onSubmit={handleSubmit} loading={loading} />
+                        <TriageForm onSubmit={(data) => handleSubmit(data, false)} loading={loading} />
                       </div>
                   </div>
                 </TabsContent>
@@ -301,7 +305,6 @@ export default function Dashboard() {
                       </div>
                   </div>
                 </TabsContent>
-
               </div>
             </div>
           </Tabs>
@@ -309,7 +312,6 @@ export default function Dashboard() {
       </div>
 
       <Footer />
-      {/* Admin Overlay */}
       {showAdmin && (
         <AdminStats patients={patients} onClose={() => setShowAdmin(false)} />
       )}

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
@@ -33,44 +33,68 @@ export function usePatients() {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
+  // Helper to ensure risk sorting is consistent
+  const sortPatients = (list: Patient[]) => sortByRisk(list);
+
   const fetchPatients = async () => {
     const { data, error } = await supabase
       .from("patients")
       .select("*")
       .order("created_at", { ascending: false });
+    
     if (!error && data) {
-      setPatients(sortByRisk(data as Patient[]));
+      setPatients(sortPatients(data as Patient[]));
     }
     setLoading(false);
   };
 
   useEffect(() => {
     if (!user) return;
+    
+    // 1. Initial Fetch
     fetchPatients();
 
+    // 2. Realtime Subscription (Optimized)
     const channel = supabase
       .channel("patients-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "patients" }, () => {
-        fetchPatients();
-      })
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "patients" },
+        (payload) => {
+          const newPatient = payload.new as Patient;
+          
+          setPatients((prev) => {
+            // Prevent duplicates if Optimistic UI already added it
+            if (prev.some((p) => p.id === newPatient.id)) return prev;
+            return sortPatients([newPatient, ...prev]);
+          });
+        }
+      )
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [user]);
 
-  // Update active patients every second to auto-discharge after 30 seconds
+  // 3. Auto-Discharge Logic (The Queue Filter)
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
-      // Keep patients created within the last 30 seconds
-      const thirtySecondsAgo = new Date(now.getTime() - 60 * 1000);
+      
+      // 
+      // CHANGE: Set to exactly 30 seconds as requested
+      const cutoffTime = new Date(now.getTime() - 30 * 1000);
 
       const active = patients.filter(p => {
         const createdAt = new Date(p.created_at);
-        return createdAt > thirtySecondsAgo;
+        return createdAt > cutoffTime;
       });
 
-      setActivePatients(active);
+      // Only update state if count changes to prevent re-render flickers
+      setActivePatients(prev => {
+        if (prev.length === active.length && prev[0]?.id === active[0]?.id) return prev;
+        return active;
+      });
+      
     }, 1000);
 
     return () => clearInterval(interval);
@@ -78,21 +102,48 @@ export function usePatients() {
 
   const addPatient = async (patient: Omit<Patient, "id" | "user_id" | "created_at">) => {
     if (!user) return null;
-    // Exclude 'department' as it's not in the patients table
     const { department, ...patientData } = patient;
 
+    // A. Optimistic Update (Immediate UI feedback)
+    const tempId = crypto.randomUUID();
+    const tempPatient = {
+      ...patient,
+      id: tempId,
+      user_id: user.id,
+      created_at: new Date().toISOString(),
+      department: department || null, 
+    } as Patient;
+
+    setPatients(prev => sortPatients([tempPatient, ...prev]));
+
+    // B. Actual DB Insert
     const { data, error } = await supabase
       .from("patients")
       .insert({ ...patientData, user_id: user.id })
       .select()
       .single();
-    if (error) { console.error("Insert error:", error); return null; }
-    return data as Patient;
+
+    if (error) {
+      console.error("Insert error:", error);
+      // Rollback on error
+      setPatients(prev => prev.filter(p => p.id !== tempId));
+      return null;
+    }
+
+    const confirmedPatient = data as Patient;
+
+    // C. Reconcile Optimistic with Real Data
+    setPatients(prev => 
+      sortPatients(prev.map(p => (p.id === tempId ? confirmedPatient : p)))
+    );
+
+    return confirmedPatient;
   };
 
-  return { patients, activePatients, loading, addPatient, refetch: fetchPatients };
+  return { activePatients, patients, loading, addPatient };
 }
 
+// Sorting Utility
 function sortByRisk(patients: Patient[]): Patient[] {
   const order: Record<string, number> = { HIGH: 0, MEDIUM: 1, LOW: 2 };
   return [...patients].sort((a, b) => {
