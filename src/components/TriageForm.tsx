@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import axios from "axios"; // Add axios
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Stethoscope, Loader2 } from "lucide-react";
+import { Stethoscope, Loader2, Upload, FileText } from "lucide-react"; // Add Upload icons
 import { PatientInput } from "@/hooks/useTriage";
 
 interface Props {
@@ -33,12 +34,53 @@ const INITIAL: PatientInput & { name: string } = {
 
 export default function TriageForm({ onSubmit, loading }: Props) {
   const [form, setForm] = useState({ ...INITIAL });
+  const [isUploading, setIsUploading] = useState(false); // New State for Upload
 
   const set = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(form);
+  };
+
+  // --- NEW FUNCTION: Handle File Upload ---
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      // 1. Send to Backend
+      const response = await axios.post("http://localhost:8000/parse-document", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const extracted = response.data.data;
+
+      // 2. Map Backend Keys to Frontend State
+      // The parser returns "Temp", but your state uses "Temperature"
+      const mappedData = { ...extracted };
+      if (mappedData.Temp) {
+        mappedData.Temperature = mappedData.Temp;
+        delete mappedData.Temp;
+      }
+
+      // 3. Update Form State
+      setForm((prev) => ({
+        ...prev,
+        ...mappedData, // Overwrite with extracted values
+      }));
+
+      alert(`✅ Scanned successfully! Found: ${Object.keys(mappedData).join(", ")}`);
+    } catch (error) {
+      console.error("Upload failed", error);
+      alert("❌ Failed to parse document. Is the backend running?");
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -49,22 +91,75 @@ export default function TriageForm({ onSubmit, loading }: Props) {
       </div>
 
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
+        
+        {/* --- NEW SECTION: Auto-Fill Upload Box --- */}
+        <div className="mb-2 rounded-lg border border-dashed border-border bg-secondary/30 p-3 transition-colors hover:bg-secondary/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-primary/20 p-2 text-primary">
+                <FileText size={20} />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">Auto-Fill from EHR</h3>
+                <p className="text-[10px] text-muted-foreground">Upload PDF medical report</p>
+              </div>
+            </div>
+
+            <label className="cursor-pointer">
+              <input type="file" accept=".pdf" className="hidden" onChange={handleFileUpload} />
+              <div
+                className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                  isUploading
+                    ? "cursor-wait bg-muted text-muted-foreground"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
+                }`}
+              >
+                {isUploading ? (
+                  <>
+                    <Loader2 className="animate-spin" size={14} />
+                    Scanning...
+                  </>
+                ) : (
+                  <>
+                    <Upload size={14} />
+                    Upload PDF
+                  </>
+                )}
+              </div>
+            </label>
+          </div>
+        </div>
+        {/* --------------------------------------- */}
+
         {/* Name */}
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Patient Name</Label>
-          <Input value={form.name} onChange={(e) => set("name", e.target.value)} className="border-border bg-secondary text-foreground" />
+          <Input
+            value={form.name}
+            onChange={(e) => set("name", e.target.value)}
+            className="border-border bg-secondary text-foreground"
+          />
         </div>
 
         {/* Demographics */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Age</Label>
-            <Input type="number" value={form.Age} onChange={(e) => set("Age", +e.target.value)} min={0} max={120} className="border-border bg-secondary text-foreground" />
+            <Input
+              type="number"
+              value={form.Age}
+              onChange={(e) => set("Age", +e.target.value)}
+              min={0}
+              max={120}
+              className="border-border bg-secondary text-foreground"
+            />
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Gender</Label>
             <Select value={form.Gender} onValueChange={(v) => set("Gender", v)}>
-              <SelectTrigger className="border-border bg-secondary text-foreground"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="border-border bg-secondary text-foreground">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Male">Male</SelectItem>
                 <SelectItem value="Female">Female</SelectItem>
@@ -104,18 +199,34 @@ export default function TriageForm({ onSubmit, loading }: Props) {
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">Pain Score (0-10)</Label>
-            <Input type="number" value={form.Pain_Score} onChange={(e) => set("Pain_Score", +e.target.value)} min={0} max={10} className="border-border bg-secondary text-foreground" />
+            <Input
+              type="number"
+              value={form.Pain_Score}
+              onChange={(e) => set("Pain_Score", +e.target.value)}
+              min={0}
+              max={10}
+              className="border-border bg-secondary text-foreground"
+            />
           </div>
           <div className="space-y-1">
             <Label className="text-xs text-muted-foreground">GCS Score (3-15)</Label>
-            <Input type="number" value={form.GCS_Score} onChange={(e) => set("GCS_Score", +e.target.value)} min={3} max={15} className="border-border bg-secondary text-foreground" />
+            <Input
+              type="number"
+              value={form.GCS_Score}
+              onChange={(e) => set("GCS_Score", +e.target.value)}
+              min={3}
+              max={15}
+              className="border-border bg-secondary text-foreground"
+            />
           </div>
         </div>
 
         <div className="space-y-1">
           <Label className="text-xs text-muted-foreground">Arrival Mode</Label>
           <Select value={form.Arrival_Mode} onValueChange={(v) => set("Arrival_Mode", v)}>
-            <SelectTrigger className="border-border bg-secondary text-foreground"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="border-border bg-secondary text-foreground">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="Walk-in">Walk-in</SelectItem>
               <SelectItem value="Ambulance">Ambulance</SelectItem>

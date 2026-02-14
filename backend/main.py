@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 from ml_service import TriageModel
+from fastapi import FastAPI, UploadFile, File
+from doc_parser import extract_vitals_from_pdf
 
 app = FastAPI(title="PARS Triage API", version="1.0.0")
 
@@ -71,6 +73,22 @@ def predict(patient: PatientInput):
 
     result = model.predict(patient.dict())
     return result
+
+@app.post("/parse-document")
+async def parse_document(file: UploadFile = File(...)):
+    """
+    Accepts a PDF, parses it, and returns the extracted vitals.
+    """
+    content = await file.read()
+    
+    # Run the parser
+    extracted_data = extract_vitals_from_pdf(content)
+    
+    return {
+        "status": "success",
+        "filename": file.filename,
+        "data": extracted_data
+    }
 
 
 if __name__ == "__main__":
