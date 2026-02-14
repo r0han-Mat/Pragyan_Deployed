@@ -1,5 +1,7 @@
 import os
 from supabase import create_client, Client
+from sentence_transformers import SentenceTransformer, util
+import torch
 
 # --- CONFIGURATION (Load from .env manually if needed, or hardcode for prototype) ---
 # ideally use python-dotenv, but we'll parse the file from parent dir for simplicity
@@ -39,12 +41,80 @@ def get_supabase() -> Client:
         print(f"[PARS] Error creating Supabase client: {e}")
         return None
 
+# --- NLP MODEL SETUP ---
+
+# Load a compact, high-performance model (approx 80MB)
+# 'all-MiniLM-L6-v2' is perfect for real-time classification
+try:
+    print("[PARS] Loading NLP Model 'all-MiniLM-L6-v2'...")
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    print("[PARS] NLP Model loaded successfully.")
+except Exception as e:
+    print(f"[PARS] WARNING: Could not load NLP model: {e}")
+    model = None
+
+# Define your departments with descriptives
+# Keys must match Supabase table names (e.g. Urology_Nephrology)
+DEPARTMENTS = [
+    "Cardiology (Heart, Blood Pressure, Chest Pain)",
+    "Neurology (Brain, Nerves, Headache, Dizziness, Stroke)",
+    "Gastroenterology (Stomach, Digestion, Vomiting, Abdominal Pain)",
+    "Pulmonology (Lungs, Breathing, Asthma, Cough)",
+    "Orthopedics (Bones, Joints, Fractures, Muscle Pain)",
+    "Emergency_Trauma (Severe Injuries, Trauma, Accident, Shock)",
+    "General_Medicine (Fever, Flu, Weakness, Fatigue)",
+    "Dermatology (Skin, Rashes, Itch)",
+    "ENT (Ear, Nose, Throat, Sinus)",
+    "Urology_Nephrology (Kidney, Bladder, Urine, UTI)",
+    "Psychiatry (Mental Health, Depression, Anxiety)",
+    "Toxicology (Poisoning, Overdose, Chemicals)"
+]
+
+# Pre-calculate embeddings for departments once to save compute
+if model:
+    try:
+        DEPT_EMBEDDINGS = model.encode(DEPARTMENTS, convert_to_tensor=True)
+    except Exception as e:
+        print(f"[PARS] Error encoding departments: {e}")
+        DEPT_EMBEDDINGS = None
+else:
+    DEPT_EMBEDDINGS = None
+
+
 # --- DEPARTMENT MAPPING LOGIC ---
 
 def get_department(complaint: str) -> str:
-    if not complaint:
+    if not complaint or len(complaint.strip()) < 3:
         return "General_Medicine"
 
+    # Use NLP Model if available
+    if model is not None and DEPT_EMBEDDINGS is not None:
+        try:
+            # 1. Encode the user's complaint into a vector
+            complaint_embedding = model.encode(complaint, convert_to_tensor=True)
+        
+            # 2. Compute Cosine Similarity against all departments
+            cos_scores = util.cos_sim(complaint_embedding, DEPT_EMBEDDINGS)[0]
+        
+            # 3. Find the index of the highest score
+            best_match_idx = int(torch.argmax(cos_scores))
+
+            # Extract the clean name (part before parenthesis)
+            full_dept_name = DEPARTMENTS[best_match_idx]
+            clean_name = full_dept_name.split(" (")[0].strip()
+        
+            return clean_name
+        except Exception as e:
+            print(f"[PARS] NLP Error: {e}")
+            # Fallback to legacy keyword search if NLP fails
+            pass
+            
+    # Fallback to keyword search (Legacy Logic)
+    return get_department_legacy(complaint)
+
+
+def get_department_legacy(complaint: str) -> str:
+    """Original keyword-based matching as fallback"""
     complaint = complaint.lower()
     
     # Mapping: Key = Table Name (underscores), Value = list of keywords
@@ -129,6 +199,7 @@ def get_referral(complaint_or_reason: str):
     Determines department table and fetches doctor list.
     """
     dept_table = get_department(complaint_or_reason)
+    print(f"[PARS] Determined Department: {dept_table} for compliant: '{complaint_or_reason}'")
     
     # Initialize Supabase
     supabase = get_supabase()
