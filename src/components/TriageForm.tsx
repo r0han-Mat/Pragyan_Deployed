@@ -86,11 +86,6 @@ export default function TriageForm({ onSubmit, loading }: Props) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-2 border-b border-border p-4">
-        <Stethoscope className="h-5 w-5 text-primary" />
-        <h2 className="text-lg font-bold text-foreground">Intake & Vitals</h2>
-      </div>
-
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
         
         {/* --- NEW SECTION: Auto-Fill Upload Box --- */}

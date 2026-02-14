@@ -1,42 +1,103 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
-}
+@layer base {
+  :root {
+    --background: 0 0% 4%;
+    --foreground: 0 0% 93%;
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+    --card: 0 0% 7%;
+    --card-foreground: 0 0% 93%;
+
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 93%;
+
+    --primary: 0 72% 51%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 12%;
+    --secondary-foreground: 0 0% 93%;
+
+    --muted: 0 0% 12%;
+    --muted-foreground: 0 0% 64%;
+
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 93%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 30% 15%;
+    --input: 0 30% 15%;
+    --ring: 0 72% 51%;
+
+    --radius: 0.5rem;
+
+    --risk-high: 0 72% 51%;
+    --risk-medium: 45 96% 58%;
+    --risk-low: 142 71% 45%;
+
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 0 0% 93%;
+    --sidebar-primary: 0 72% 51%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 12%;
+    --sidebar-accent-foreground: 0 0% 93%;
+    --sidebar-border: 0 30% 15%;
+    --sidebar-ring: 0 72% 51%;
   }
-  to {
-    transform: rotate(360deg);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    /* Main body text remains clean sans-serif for medical readability */
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-image: radial-gradient(hsl(0 0% 15% / 0.2) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* Headings get the premium 'DM Serif Display' treatment */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'DM Serif Display', serif;
+    letter-spacing: 0.02em;
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+@layer utilities {
+  /* Use this class for the PARS logo: className="font-logo" */
+  .font-logo {
+    font-family: 'Lobster Two', cursive;
+  }
+  
+  /* Helper if you need the serif elsewhere */
+  .font-serif-display {
+    font-family: 'DM Serif Display', serif;
   }
 }
 
-.card {
-  padding: 2em;
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.05); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.08); }
+  70% { transform: scale(1); }
 }
 
-.read-the-docs {
-  color: #888;
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 5px hsl(0 72% 51% / 0.3); }
+  50% { box-shadow: 0 0 20px hsl(0 72% 51% / 0.6), 0 0 40px hsl(0 72% 51% / 0.3); }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.5s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
 }
