@@ -1,17 +1,19 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
 fastapi
 uvicorn
+python-multipart
+python-dotenv
 sqlalchemy
-tensorflow>=2.16.0
+# Use CPU-only tensorflow to save massive space
+tensorflow-cpu
 scikit-learn
 pandas
 joblib
 numpy
-
+# CPU-only torch via extra-url
 sentence-transformers
 torch
-google-generativeai
-python-dotenv
+google-generativeai==0.3.2
 pypdf
 supabase
-python-multipart
-
+requests
