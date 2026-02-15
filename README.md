@@ -6,6 +6,15 @@
 
 PARS is a state-of-the-art **AI-Powered Triage System** designed to revolutionize emergency room efficiency. By leveraging machine learning and real-time data processing, PARS automatically prioritizes patients based on vital signs and chief complaints, ensuring that critical cases receive immediate attention.
 
+# Project Title: AI-Powered Smart Patient Triage System (Hackathon Winner)
+## 1. Tech Stack
+- **Frontend:** React (Vite), Tailwind CSS, Framer Motion (for smooth animations), Lucide React (icons), Recharts (for risk charts).
+- **Backend:** Python FastAPI (standard for ML integration).
+- **Database:** SQLite (for simplicity) using SQLAlchemy.
+- **ML Engine:** Python (TensorFlow/Keras + Scikit-Learn logic).
+- **NLP
+
+
 ---
 
 ## 🏗️ System Architecture
