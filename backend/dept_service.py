@@ -57,7 +57,7 @@ except Exception as e:
 # Keys must match Supabase table names (e.g. Urology_Nephrology)
 DEPARTMENTS = [
     "Cardiology (Heart, Blood Pressure, Chest Pain)",
-    "Neurology (Brain, Nerves, Headache, Dizziness, Stroke)",
+    "Neurology (Brain, Nerves, Headache, Stroke)",
     "Gastroenterology (Stomach, Digestion, Vomiting, Abdominal Pain)",
     "Pulmonology (Lungs, Breathing, Asthma, Cough)",
     "Orthopedics (Bones, Joints, Fractures, Muscle Pain)",
@@ -67,7 +67,7 @@ DEPARTMENTS = [
     "ENT (Ear, Nose, Throat, Sinus)",
     "Urology_Nephrology (Kidney, Bladder, Urine, UTI)",
     "Psychiatry (Mental Health, Depression, Anxiety)",
-    "Toxicology (Poisoning, Overdose, Chemicals)"
+    "Toxicology (Poisoning, Overdose, Chemicals, Alcohol)"
 ]
 
 # Pre-calculate embeddings for departments once to save compute
@@ -110,7 +110,7 @@ def get_department(complaint: str) -> str:
             pass
             
     # Fallback to keyword search (Legacy Logic)
-    return get_department_legacy(complaint)
+    # return get_department_legacy(complaint)
 
 
 def get_department_legacy(complaint: str) -> str:
@@ -126,7 +126,7 @@ def get_department_legacy(complaint: str) -> str:
             "cardiac", "myocardial", "coronary", "valve", "atrial", "ventricular"
         ],
         "Neurology": [
-            "stroke", "migraine", "vertigo", "confusion", "syncope", "dizziness", 
+            "stroke", "migraine", "vertigo", "confusion", "syncope",
             "unresponsive", "headache", "blurry vision", "faint", "seizure", 
             "paralysis", "numbness", "tingling", "tremor", "slurred speech", 
             "memory loss", "coma", "concussion", "brain", "nerve", "neuropathy", 
@@ -181,10 +181,10 @@ def get_department_legacy(complaint: str) -> str:
             "schizophrenia", "bipolar", "stress", "insomnia", "delusion", 
             "aggressive", "behavioral", "mental", "mood", "withdrawal"
         ],
-        "Toxicology": [
-            "poison", "drug", "pill", "chemical", "ingestion", "venom", 
-            "snake bite", "spider bite", "reaction", "alcohol", "intoxication", 
-            "substance", "fume", "gas"
+       "Toxicology": [
+            "poison", "drug", "pill", "chemical", "ingestion", "venom",
+            "snake bite", "spider bite", "reaction", "alcohol", "intoxication",
+            "substance", "fume", "gas", "dizziness", "vomitting", "alcohol"
         ]
     }
 
@@ -199,7 +199,7 @@ def get_referral(complaint_or_reason: str):
     Determines department table and fetches doctor list.
     """
     dept_table = get_department(complaint_or_reason)
-    print(f"[PARS] Determined Department: {dept_table} for compliant: '{complaint_or_reason}'")
+    print(f"[PARS] Determined Department: {dept_table} for complaint: '{complaint_or_reason}'")
     
     # Initialize Supabase
     supabase = get_supabase()

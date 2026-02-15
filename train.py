@@ -10,7 +10,7 @@ from tensorflow.keras import models, layers, callbacks
 import joblib
 
 # 1. Load Data
-file_path = r"D:\study\coding_prac\html_css_learn\patient_pars\patients_data.csv"
+file_path = "patients_data.csv"
 try:
     df = pd.read_csv(file_path)
     print("Dataset loaded successfully.")
