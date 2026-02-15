@@ -313,7 +313,8 @@ export default function PatientIntake() {
                                        formData.append("file", file);
                                        const toastId = toast.loading("Uploading & Parsing Document...");
                                        try {
-                                          const res = await fetch("http://localhost:8000/parse-document", { method: "POST", body: formData });
+                                          const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+                                          const res = await fetch(`${API_URL}/parse-document`, { method: "POST", body: formData });
                                           const data = await res.json();
                                           if (data.data) {
                                              const extracted = data.data;
