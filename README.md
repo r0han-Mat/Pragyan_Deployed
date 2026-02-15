@@ -4,6 +4,7 @@
 - **Backend:** Python FastAPI (standard for ML integration).
 - **Database:** SQLite (for simplicity) using SQLAlchemy.
 - **ML Engine:** Python (TensorFlow/Keras + Scikit-Learn logic).
+- **NLP
 
 ## 2. User Flow & Experience
 1.  **Login Screen:** A clean, professional medical login (email/password). Use a medical blue/white theme.
