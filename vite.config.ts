@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: Number(process.env.PORT) || 8080,
+    allowedHosts: ["calm-charisma-production.up.railway.app", ".up.railway.app"],
     hmr: {
       overlay: false,
     },
