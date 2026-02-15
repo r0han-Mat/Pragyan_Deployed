@@ -9,12 +9,14 @@ import {
   Stethoscope, 
   Clock,
   ShieldAlert,
-  Star,
-  Siren,
   ChevronRight,
   Users,
-  Building2
+  Building2,
+  FileText,
+  Siren
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { TriageResult } from "@/hooks/useTriage";
 import { Patient } from "@/hooks/usePatients";
 import {
@@ -31,6 +33,7 @@ interface Props {
   result: TriageResult | null;
   patients: Patient[];
   apiError: string | null;
+  selectedPatient?: Patient | null;
 }
 
 // 🎨 DYNAMIC THEME CONFIGURATION
@@ -88,7 +91,176 @@ const PROTOCOLS = {
   ]
 };
 
-export default function RiskPanel({ result, patients, apiError }: Props) {
+export default function RiskPanel({ result, patients, apiError, selectedPatient }: Props) {
+  
+  // Default to first patient if specific selection missing (e.g. live view)
+  const activePatient = selectedPatient || patients[0]; 
+
+  const handleExportPDF = () => {
+    if (!activePatient) return;
+
+    const doc = new jsPDF();
+    const primaryColor = [22, 163, 74]; // Emerald-ish branding for PARS
+    const darkColor = [33, 33, 33];
+    const lightGray = [245, 245, 245];
+
+    // --- 1. PROFESSIONAL HEADER ---
+    // Top Bar
+    doc.setFillColor(30, 41, 59); // Dark slate
+    doc.rect(0, 0, 210, 30, 'F');
+
+    // Logo / Title area
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.text("PARS", 14, 18);
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(200, 200, 200);
+    doc.text("CLINICAL DECISION SUPPORT & ROUTING", 14, 24);
+
+    // Meta Data (Top Right)
+    doc.setFontSize(9);
+    doc.text("DATE:", 150, 12);
+    doc.text(new Date().toLocaleDateString().toUpperCase(), 175, 12);
+    
+    doc.text("TIME:", 150, 17);
+    doc.text(new Date().toLocaleTimeString().toUpperCase(), 175, 17);
+
+    doc.text("CASE ID:", 150, 22);
+    doc.text(`#${activePatient.id.slice(0, 6).toUpperCase()}`, 175, 22);
+
+    // --- 2. PATIENT IDENTITY ---
+    let currentY = 45;
+    
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("PATIENT IDENTITY", 14, currentY);
+    
+    doc.setDrawColor(200, 200, 200);
+    doc.line(14, currentY + 2, 196, currentY + 2); // Underline
+
+    const patientData = [
+      [`NAME:  ${activePatient.name}`, `AGE / SEX:  ${activePatient.age} / ${activePatient.gender}`],
+      [`ARRIVAL:  ${activePatient.arrival_mode.toUpperCase()}`, `HISTORY:  ${[
+          activePatient.diabetes ? "Diabetic" : "",
+          activePatient.hypertension ? "HTN" : "",
+          activePatient.heart_disease ? "Cardiac" : ""
+        ].filter(Boolean).join(", ") || "None Reported"}`
+      ]
+    ];
+
+    autoTable(doc, {
+      startY: currentY + 5,
+      body: patientData,
+      theme: 'plain',
+      styles: { fontSize: 10, cellPadding: 3, textColor: 50 },
+      columnStyles: { 0: { cellWidth: 100, fontStyle: 'bold' }, 1: { fontStyle: 'bold' } },
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 10;
+
+    // --- 3. SUBJECTIVE: CHIEF COMPLAINT ---
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text("CHIEF COMPLAINT & SYMPTOMS", 14, currentY);
+    doc.line(14, currentY + 2, 196, currentY + 2);
+
+    // Background box for complaint
+    const complaintText = activePatient.chief_complaint || activePatient.explanation || "No narrative symptoms recorded by triage interface.";
+    const splitComplaint = doc.splitTextToSize(complaintText, 180);
+    const boxHeight = (splitComplaint.length * 6) + 10;
+
+    doc.setFillColor(248, 250, 252); // Very light slate
+    doc.setDrawColor(226, 232, 240); // Border
+    doc.roundedRect(14, currentY + 5, 182, boxHeight, 2, 2, 'FD');
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "italic");
+    doc.setTextColor(60, 60, 60);
+    doc.text(splitComplaint, 18, currentY + 12);
+
+    currentY += boxHeight + 15;
+
+    // --- 4. OBJECTIVE: VITALS GRID ---
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 0, 0);
+    doc.text("OBJECTIVE VITALS", 14, currentY);
+    doc.line(14, currentY + 2, 196, currentY + 2);
+
+    const vitals = [
+      ["HR", `${activePatient.heart_rate} bpm`, "BP", `${activePatient.systolic_bp}/${activePatient.diastolic_bp} mmHg`, "SpO2", `${activePatient.o2_saturation}%`],
+      ["TEMP", `${activePatient.temperature}°C`, "RR", `${activePatient.respiratory_rate}/min`, "PAIN", `${activePatient.pain_score}/10`],
+      ["GCS", `${activePatient.gcs_score}/15`, "", "", "", ""]
+    ];
+
+    autoTable(doc, {
+      startY: currentY + 5,
+      head: [['Metric', 'Value', 'Metric', 'Value', 'Metric', 'Value']],
+      body: vitals,
+      theme: 'grid',
+      headStyles: { fillColor: [51, 65, 85], textColor: 255, fontSize: 9, halign: 'center' },
+      bodyStyles: { fontSize: 10, cellPadding: 4, halign: 'center' },
+      columnStyles: { 
+        0: { fontStyle: 'bold', fillColor: 245 }, 
+        2: { fontStyle: 'bold', fillColor: 245 },
+        4: { fontStyle: 'bold', fillColor: 245 }
+      }
+    });
+
+    currentY = (doc as any).lastAutoTable.finalY + 15;
+
+    // --- 5. PARS ASSESSMENT (The "Conclusion") ---
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text("PARS ASSESSMENT & DISPOSITION", 14, currentY);
+    doc.line(14, currentY + 2, 196, currentY + 2);
+
+    // Dynamic Color for Risk
+    let rColor = [46, 204, 113]; // Green
+    if (activePatient.risk_label === "MEDIUM") rColor = [243, 156, 18]; // Orange
+    if (activePatient.risk_label === "HIGH") rColor = [231, 76, 60]; // Red
+
+    // Risk Badge Box
+    doc.setFillColor(rColor[0], rColor[1], rColor[2]);
+    doc.rect(14, currentY + 8, 40, 20, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.text("TRIAGE LEVEL", 34, currentY + 14, { align: "center" });
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(activePatient.risk_label || "N/A", 34, currentY + 23, { align: "center" });
+
+    // Routing Box
+    doc.setDrawColor(0);
+    doc.setFillColor(255, 255, 255);
+    doc.rect(54, currentY + 8, 142, 20); // Border only
+
+    doc.setTextColor(80, 80, 80);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text("RECOMMENDED DEPARTMENT:", 60, currentY + 14);
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    const dept = activePatient.department?.replace(/_/g, " ").toUpperCase() || "GENERAL MEDICINE";
+    doc.text(dept, 60, currentY + 23);
+
+    // --- FOOTER ---
+    const pageHeight = doc.internal.pageSize.height;
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.setFont("helvetica", "normal");
+    doc.text("Generated by PARS (Patient Assessment & Routing System). This report is a clinical aid and does not replace physician judgment.", 105, pageHeight - 10, { align: "center" });
+
+    doc.save(`PARS_Report_${activePatient.name.replace(/\s+/g, '_')}.pdf`);
+  };
+
   const [randomProtocol, setRandomProtocol] = useState<any>(null);
   const [showFullList, setShowFullList] = useState(false);
   
@@ -126,11 +298,24 @@ export default function RiskPanel({ result, patients, apiError }: Props) {
             <Activity className={`h-5 w-5 ${result?.risk_label === 'HIGH' ? 'animate-pulse' : ''}`} />
           </div>
         </div>
-        {result && (
-           <Badge variant="outline" className={`${currentTheme.border} ${currentTheme.text} ${currentTheme.bg} transition-all duration-500`}>
-             LIVE
-           </Badge>
-        )}
+        <div className="flex items-center gap-3">
+          {/* EXPORT BUTTON */}
+          {result && activePatient && (
+              <button
+                onClick={handleExportPDF}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-[10px] font-bold uppercase tracking-wider transition-all
+                  ${currentTheme.border} ${currentTheme.bg} ${currentTheme.text} hover:bg-opacity-80`}
+              >
+                <FileText className="h-3 w-3" />
+                Export PDF
+              </button>
+          )}
+          {result && (
+            <Badge variant="outline" className={`${currentTheme.border} ${currentTheme.text} ${currentTheme.bg} transition-all duration-500`}>
+              LIVE
+            </Badge>
+          )}
+        </div>
       </div>
 
       <ScrollArea className="relative z-10 flex-1 px-5 py-6">
@@ -217,6 +402,7 @@ export default function RiskPanel({ result, patients, apiError }: Props) {
             <div className="space-y-4 pt-4 border-t border-zinc-800">
                <div className="flex items-center justify-between">
                   <h3 className="flex items-center gap-2 text-sm font-bold text-zinc-100 uppercase tracking-wide">
+                    <ShieldAlert className={`h-4 w-4 ${currentTheme.text}`} />
                     Specialist Match
                   </h3>
                   <button 
@@ -233,12 +419,12 @@ export default function RiskPanel({ result, patients, apiError }: Props) {
                   <div className={`absolute inset-0 opacity-10 bg-gradient-to-r ${currentTheme.text.replace('text', 'from')} to-transparent`} />
                   
                   <div className="relative p-6 flex flex-col items-center justify-center text-center gap-2">
-                     <div className="space-y-1">
-                       <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Recommended Department</p>
-                       <h2 className="text-2xl font-black text-white uppercase tracking-tight font-serif-display">
-                         {result.referral.department.replace("_", " ")}
-                       </h2>
-                     </div>
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Recommended Department</p>
+                        <h2 className="text-2xl font-black text-white uppercase tracking-tight font-serif-display">
+                          {result.referral.department.replace("_", " ")}
+                        </h2>
+                      </div>
                   </div>
 
                   {/* Best Match Doctor Preview */}
