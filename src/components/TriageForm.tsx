@@ -92,6 +92,9 @@ export default function TriageForm({ onSubmit, loading }: Props) {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    // Reset input value to allow selecting the same file again if needed
+    event.target.value = "";
+
     setIsUploading(true);
     const formData = new FormData();
     formData.append("file", file);
@@ -139,8 +142,14 @@ export default function TriageForm({ onSubmit, loading }: Props) {
               </div>
             </div>
 
-            <label className="cursor-pointer">
-              <input type="file" accept=".pdf" className="hidden" onChange={handleFileUpload} />
+            <input 
+              type="file" 
+              id="triage-upload" 
+              accept=".pdf" 
+              className="hidden" 
+              onChange={handleFileUpload} 
+            />
+            <label htmlFor="triage-upload" className="cursor-pointer">
               <div
                 className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
                   isUploading
