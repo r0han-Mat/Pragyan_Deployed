@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
@@ -18,19 +17,20 @@ interface Props {
   loading: boolean;
 }
 
-const INITIAL: PatientInput & { name: string } = {
-  name: "Patient",
-  Age: 30,
-  Gender: "Male",
-  Heart_Rate: 80,
-  Systolic_BP: 120,
-  Diastolic_BP: 80,
-  O2_Saturation: 98,
-  Temperature: 37,
-  Respiratory_Rate: 16,
-  Pain_Score: 3,
-  GCS_Score: 15,
-  Arrival_Mode: "Walk-in",
+// Initial state set to undefined/empty so placeholders are visible
+const INITIAL: Partial<PatientInput> & { name: string } = {
+  name: "",
+  Age: undefined, 
+  Gender: "",
+  Heart_Rate: undefined,
+  Systolic_BP: undefined,
+  Diastolic_BP: undefined,
+  O2_Saturation: undefined,
+  Temperature: undefined,
+  Respiratory_Rate: undefined,
+  Pain_Score: undefined,
+  GCS_Score: undefined,
+  Arrival_Mode: "",
   Diabetes: false,
   Hypertension: false,
   Heart_Disease: false,
@@ -38,25 +38,42 @@ const INITIAL: PatientInput & { name: string } = {
 };
 
 export default function TriageForm({ onSubmit, loading }: Props) {
-  const [form, setForm] = useState({ ...INITIAL });
+  // @ts-ignore - Allowing partial state for form handling before submission
+  const [form, setForm] = useState(INITIAL);
   const [isUploading, setIsUploading] = useState(false);
 
   const set = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(form);
+    
+    // Fill defaults for submission if fields are still empty
+    const safeForm = {
+        ...form,
+        name: form.name || "Unknown Patient",
+        Age: form.Age || 30,
+        Gender: form.Gender || "Male",
+        Heart_Rate: form.Heart_Rate || 80,
+        Systolic_BP: form.Systolic_BP || 120,
+        Diastolic_BP: form.Diastolic_BP || 80,
+        O2_Saturation: form.O2_Saturation || 98,
+        Temperature: form.Temperature || 37,
+        Respiratory_Rate: form.Respiratory_Rate || 16,
+        Pain_Score: form.Pain_Score || 0,
+        GCS_Score: form.GCS_Score || 15,
+        Arrival_Mode: form.Arrival_Mode || "Walk-in",
+    } as PatientInput & { name: string };
+
+    onSubmit(safeForm);
   };
 
   // --- Voice Handler ---
   const handleVoiceResult = (text: string) => {
-    // 1. Append to Chief Complaint
     setForm(prev => ({
       ...prev,
       Chief_Complaint: prev.Chief_Complaint ? `${prev.Chief_Complaint} ${text}` : text
     }));
 
-    // 2. Parse & Auto-fill
     const { extracted } = parseVoiceInput(text);
     if (Object.keys(extracted).length > 0) {
       setForm(prev => ({ ...prev, ...extracted }));
@@ -108,7 +125,7 @@ export default function TriageForm({ onSubmit, loading }: Props) {
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
         
         {/* --- Auto-Fill Upload Box --- */}
-        <div className="mb-2 rounded-lg border border-dashed border-border bg-secondary/30 p-3 transition-colors hover:bg-secondary/50">
+        <div className="mb-2 rounded-lg border-2 border-dashed border-border bg-secondary/30 p-3 transition-colors hover:bg-secondary/50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-primary/20 p-2 text-primary">
@@ -147,24 +164,25 @@ export default function TriageForm({ onSubmit, loading }: Props) {
         
         {/* Name */}
         <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Patient Name</Label>
+          <Label className="text-xs text-white">Patient Name</Label>
           <Input
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
-            className="border-border bg-secondary text-foreground"
+            placeholder="e.g. John Doe"
+            className="border-2 border-border bg-secondary text-foreground placeholder:text-muted-foreground/40"
           />
         </div>
 
         {/* Chief Complaint WITH VOICE */}
         <div className="space-y-1 relative">
           <div className="flex justify-between items-center">
-             <Label className="text-xs text-muted-foreground">Chief Complaint / Symptoms (Optional)</Label>
+             <Label className="text-xs text-white">Chief Complaint / Symptoms (Optional)</Label>
              {hasSupport && (
-               <button
+               <button  
                  type="button"
                  onClick={toggleListening}
                  className={`flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full transition-all ${
-                    isListening ? "bg-red-500 text-white animate-pulse" : "bg-primary/10 text-primary hover:bg-primary/20"
+                   isListening ? "bg-red-500 text-white animate-pulse" : "bg-primary/10 text-primary hover:bg-primary/20"
                  }`}
                >
                  {isListening ? <Mic className="h-3 w-3" /> : <MicOff className="h-3 w-3" />}
@@ -176,8 +194,8 @@ export default function TriageForm({ onSubmit, loading }: Props) {
             <Textarea 
               value={form.Chief_Complaint || ""} 
               onChange={(e) => set("Chief_Complaint", e.target.value)} 
-              placeholder="e.g. Chest pain radiating to left arm..."
-              className="border-border bg-secondary text-foreground placeholder:text-muted-foreground/50 min-h-[80px]" 
+              placeholder="e.g. Chest pain radiating to left arm, started 2 hours ago..."
+              className="border-2 border-border bg-secondary text-foreground placeholder:text-muted-foreground/40 min-h-[80px]" 
             />
           </div>
         </div>
@@ -185,21 +203,22 @@ export default function TriageForm({ onSubmit, loading }: Props) {
         {/* Demographics */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Age</Label>
+            <Label className="text-xs text-white">Age</Label>
             <Input
               type="number"
-              value={form.Age}
-              onChange={(e) => set("Age", +e.target.value)}
+              value={form.Age === undefined ? "" : form.Age}
+              onChange={(e) => set("Age", e.target.value === "" ? undefined : +e.target.value)}
               min={0}
               max={120}
-              className="border-border bg-secondary text-foreground"
+              placeholder="e.g. 45"
+              className="border-border bg-secondary text-foreground placeholder:text-muted-foreground/40"
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Gender</Label>
+            <Label className="text-xs text-white">Gender</Label>
             <Select value={form.Gender} onValueChange={(v) => set("Gender", v)}>
-              <SelectTrigger className="border-border bg-secondary text-foreground">
-                <SelectValue />
+              <SelectTrigger className="border-border bg-secondary text-foreground data-[placeholder]:text-muted-foreground/40">
+                <SelectValue placeholder="e.g. Male" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Male">Male</SelectItem>
@@ -213,23 +232,24 @@ export default function TriageForm({ onSubmit, loading }: Props) {
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">Vitals</p>
         <div className="grid grid-cols-2 gap-3">
           {[
-            ["Heart_Rate", "Heart Rate (bpm)", 0, 300],
-            ["Systolic_BP", "Systolic BP (mmHg)", 0, 300],
-            ["Diastolic_BP", "Diastolic BP (mmHg)", 0, 200],
-            ["O2_Saturation", "O₂ Saturation (%)", 0, 100],
-            ["Temperature", "Temperature (°C)", 30, 45],
-            ["Respiratory_Rate", "Resp Rate", 0, 60],
-          ].map(([key, label, min, max]) => (
+            ["Heart_Rate", "Heart Rate (bpm)", 0, 300, "e.g. 80"],
+            ["Systolic_BP", "Systolic BP (mmHg)", 0, 300, "e.g. 120"],
+            ["Diastolic_BP", "Diastolic BP (mmHg)", 0, 200, "e.g. 80"],
+            ["O2_Saturation", "O₂ Saturation (%)", 0, 100, "e.g. 98"],
+            ["Temperature", "Temperature (°C)", 30, 45, "e.g. 37.0"],
+            ["Respiratory_Rate", "Resp Rate", 0, 60, "e.g. 16"],
+          ].map(([key, label, min, max, placeholder]) => (
             <div key={key as string} className="space-y-1">
-              <Label className="text-xs text-muted-foreground">{label as string}</Label>
+              <Label className="text-xs text-white">{label as string}</Label>
               <Input
                 type="number"
                 step={key === "Temperature" ? 0.1 : 1}
-                value={(form as any)[key as string]}
-                onChange={(e) => set(key as string, +e.target.value)}
+                value={(form as any)[key as string] === undefined ? "" : (form as any)[key as string]}
+                onChange={(e) => set(key as string, e.target.value === "" ? undefined : +e.target.value)}
                 min={min as number}
                 max={max as number}
-                className="border-border bg-secondary text-foreground"
+                placeholder={placeholder as string}
+                className="border-border bg-secondary text-foreground placeholder:text-muted-foreground/40"
               />
             </div>
           ))}
@@ -239,34 +259,36 @@ export default function TriageForm({ onSubmit, loading }: Props) {
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">Clinical</p>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">Pain Score (0-10)</Label>
+            <Label className="text-xs text-white">Pain Score (0-10)</Label>
             <Input
               type="number"
-              value={form.Pain_Score}
-              onChange={(e) => set("Pain_Score", +e.target.value)}
+              value={form.Pain_Score === undefined ? "" : form.Pain_Score}
+              onChange={(e) => set("Pain_Score", e.target.value === "" ? undefined : +e.target.value)}
               min={0}
               max={10}
-              className="border-border bg-secondary text-foreground"
+              placeholder="e.g. 0"
+              className="border-border bg-secondary text-foreground placeholder:text-muted-foreground/40"
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-muted-foreground">GCS Score (3-15)</Label>
+            <Label className="text-xs text-white">GCS Score (3-15)</Label>
             <Input
               type="number"
-              value={form.GCS_Score}
-              onChange={(e) => set("GCS_Score", +e.target.value)}
+              value={form.GCS_Score === undefined ? "" : form.GCS_Score}
+              onChange={(e) => set("GCS_Score", e.target.value === "" ? undefined : +e.target.value)}
               min={3}
               max={15}
-              className="border-border bg-secondary text-foreground"
+              placeholder="e.g. 15"
+              className="border-border bg-secondary text-foreground placeholder:text-muted-foreground/40"
             />
           </div>
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs text-muted-foreground">Arrival Mode</Label>
+          <Label className="text-xs text-white">Arrival Mode</Label>
           <Select value={form.Arrival_Mode} onValueChange={(v) => set("Arrival_Mode", v)}>
-            <SelectTrigger className="border-border bg-secondary text-foreground">
-              <SelectValue />
+            <SelectTrigger className="border-border bg-secondary text-foreground data-[placeholder]:text-muted-foreground/40">
+              <SelectValue placeholder="e.g. Walk-in" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="Walk-in">Walk-in</SelectItem>

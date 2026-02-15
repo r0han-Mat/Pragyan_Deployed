@@ -233,10 +233,10 @@ export default function Dashboard() {
       </header>
 
       {/* Main Workspace */}
-      <div className="flex flex-1 gap-4 overflow-hidden">
+      <div className="flex flex-1 flex-col md:flex-row gap-4 overflow-hidden">
         
         {/* LEFT COLUMN: Queue */}
-        <aside className="w-[320px] lg:w-[380px] flex flex-col rounded-2xl border border-[#D4AF37]/50 bg-card/30 backdrop-blur-md shadow-lg overflow-hidden">
+        <aside className="w-full md:w-[320px] lg:w-[380px] flex flex-col shrink-0 rounded-2xl border border-[#D4AF37]/50 bg-card/30 backdrop-blur-md shadow-lg overflow-hidden h-[300px] md:h-auto transition-all">
           <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-card/40">
             <div className="flex items-center gap-2">
               <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
@@ -248,7 +248,7 @@ export default function Dashboard() {
 
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/20 px-3 py-1.5">
-                <Label htmlFor="sim-mode" className="text-[10px] font-bold uppercase text-muted-foreground cursor-pointer">
+                <Label htmlFor="sim-mode" className="text-[10px] font-bold uppercase text-muted-foreground cursor-pointer hidden sm:block">
                   Live Sim
                 </Label>
                 <Switch

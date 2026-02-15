@@ -44,74 +44,26 @@ export default function Login() {
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-black">
 
-      {/* ECG Animated Background */}
-      <div className="absolute inset-0 z-0 overflow-hidden">
-
-        {/* subtle grid */}
-        <div className="absolute inset-0 opacity-[0.08]"
-          style={{
-            backgroundImage: `
-              linear-gradient(to right, #00ff66 1px, transparent 1px),
-              linear-gradient(to bottom, #00ff66 1px, transparent 1px)
-            `,
-            backgroundSize: "60px 60px"
-          }}
-        />
-
-        {/* ECG Line */}
-        <svg
-          className="absolute w-[200%] h-full animate-ecg"
-          viewBox="0 0 2000 400"
-          preserveAspectRatio="none"
-        >
-          <path
-            d="
-              M0 200 
-              L150 200 
-              L180 200 
-              L200 120 
-              L220 280 
-              L240 200 
-              L400 200
-              L430 200 
-              L450 140 
-              L470 260 
-              L490 200 
-              L800 200
-              L830 200 
-              L850 120 
-              L870 280 
-              L890 200 
-              L1200 200
-              L1230 200 
-              L1250 140 
-              L1270 260 
-              L1290 200 
-              L1600 200
-              L1630 200 
-              L1650 120 
-              L1670 280 
-              L1690 200 
-              L2000 200
-            "
-            fill="none"
-            stroke="#00ff66"
-            strokeWidth="3"
-            strokeLinecap="round"
-            className="drop-shadow-[0_0_15px_rgba(0,255,100,0.9)]"
-          />
-        </svg>
-
-      </div>
+      {/* Login Video Background */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover z-0"
+        style={{ filter: "brightness(0.5)" }} // Darken slightly for text readability
+      >
+        <source src="/login-vid.mp4" type="video/mp4" />
+      </video>
 
       {/* dark overlay */}
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm z-10" />
+      <div className="absolute inset-0 bg-black/10" />
 
       {/* main content */}
       <div className="relative z-20 grid min-h-screen grid-cols-1 lg:grid-cols-2">
 
         {/* LEFT SIDE */}
-        <div className="flex flex-col items-center justify-center px-10">
+        <div className="flex flex-col items-center justify-center px-6 md:px-10 py-12 lg:py-0">
 
           <motion.img
             src="/logo.png"
@@ -119,7 +71,7 @@ export default function Login() {
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.7 }}
-            className="h-36 w-auto mb-8 drop-shadow-[0_0_25px_rgba(255,0,0,0.25)]"
+            className="h-24 md:h-36 w-auto mb-6 md:mb-8 drop-shadow-[0_0_25px_rgba(255,0,0,0.25)]"
           />
 
           <motion.div
@@ -128,21 +80,21 @@ export default function Login() {
             transition={{ delay: 0.2, duration: 0.7 }}
             className="max-w-md text-left"
           >
-            <h1 className="text-5xl font-bold text-white tracking-tight">
+            <h1 className="text-3xl md:text-5xl font-bold text-white tracking-tight">
               Operation{" "}
               <span className="text-red-500 drop-shadow-[0_0_8px_rgba(255,0,0,0.5)]">
                 PARS
               </span>
             </h1>
 
-            <p className="mt-4 text-red-400 font-medium">
+            <p className="mt-4 text-red-400 font-medium text-sm md:text-base">
               Patient Assessment & Risk Stratification System
             </p>
 
-            <p className="mt-3 text-gray-400 text-sm leading-relaxed">
-A real-time clinical support interface engineered for high-pressure environments. 
-              Leverages predictive analytics to facilitate rapid acuity scoring, dynamic patient 
-              prioritization, and evidence-based care coordination without disrupting clinical workflow.
+            <p className="mt-3 text-gray-400 text-xs md:text-sm leading-relaxed">
+              A real-time clinical support interface engineered for high-pressure environments. 
+              Leverages predictive analytics to facilitate rapid acuity scoring, patient 
+              prioritization, and care coordination.
             </p>
           </motion.div>
 
