@@ -3,15 +3,41 @@ PARS - FastAPI Backend
 Run with: uvicorn main:app --reload --port 8000
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional
 from typing import Optional, List, Dict, Any
-from ml_service import TriageModel
-from fastapi import FastAPI, UploadFile, File
-from doc_parser import extract_vitals_from_pdf
-from dept_service import get_referral, get_department
+
+# Try to import ML service (requires TensorFlow)
+try:
+    from ml_service import TriageModel
+    ML_AVAILABLE = True
+except Exception as e:
+    print(f"[PARS] WARNING: ML service not available: {e}")
+    TriageModel = None
+    ML_AVAILABLE = False
+
+# Try to import doc parser (requires Google AI)
+try:
+    from doc_parser import extract_vitals_from_pdf
+    DOC_PARSER_AVAILABLE = True
+except Exception as e:
+    print(f"[PARS] WARNING: Doc parser not available: {e}")
+    extract_vitals_from_pdf = None
+    DOC_PARSER_AVAILABLE = False
+
+# Try to import dept service
+try:
+    from dept_service import get_referral, get_department
+    DEPT_SERVICE_AVAILABLE = True
+except Exception as e:
+    print(f"[PARS] WARNING: Dept service not available: {e}")
+    get_referral = None
+    get_department = None
+    DEPT_SERVICE_AVAILABLE = False
+
+
 
 app = FastAPI(title="PARS Triage API", version="1.0.0")
 
@@ -31,13 +57,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load model on startup
-try:
-    model = TriageModel()
-    print("[PARS] Model loaded successfully.")
-except Exception as e:
-    print(f"[PARS] WARNING: Could not load model: {e}")
+# Load model on startup (if ML is available)
+if ML_AVAILABLE:
+    try:
+        model = TriageModel()
+        print("[PARS] Model loaded successfully.")
+    except Exception as e:
+        print(f"[PARS] WARNING: Could not load model: {e}")
+        model = None
+else:
     model = None
+    print("[PARS] Running without ML model (TensorFlow not available)")
 
 
 class PatientInput(BaseModel):
@@ -67,7 +97,12 @@ class TriageResponse(BaseModel):
 
 @app.get("/")
 def health():
-    return {"status": "ok", "model_loaded": model is not None}
+    return {
+        "status": "ok", 
+        "model_loaded": model is not None,
+        "ml_available": ML_AVAILABLE,
+        "whisper_available": True  # Whisper is always available
+    }
 
 
 @app.post("/predict", response_model=TriageResponse)
@@ -133,6 +168,10 @@ async def parse_document(file: UploadFile = File(...)):
     }
 
 
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    import os
+    port = int(os.getenv("PORT", "8000"))
+    uvicorn.run(app, host="0.0.0.0", port=port)

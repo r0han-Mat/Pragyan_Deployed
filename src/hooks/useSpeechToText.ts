@@ -1,105 +1,211 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { toast } from 'sonner';
 
-interface UseSpeechToTextProps {
-  onResult: (text: string) => void;
-  continuous?: boolean;
+// Define the interface for the hook's return value
+interface UseSpeechToTextReturn {
+  isListening: boolean;
+  transcript: string;
+  startListening: () => void;
+  stopListening: () => void;
+  resetTranscript: () => void;
+  hasRecognitionSupport: boolean;
 }
 
-export const useSpeechToText = ({ onResult, continuous = false }: UseSpeechToTextProps) => {
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<any>(null);
-  
-  // 1. Create a Ref to track state instantly inside the event listener
-  const isListeningRef = useRef(isListening);
+// Add type definitions for the Web Speech API which might be missing in some TS environments
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+  resultIndex: number;
+}
 
-  // 2. Sync the Ref with the State
+interface SpeechRecognitionResultList {
+  length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  isFinal: boolean;
+  length: number;
+  item(index: number): SpeechRecognitionAlternative;
+  [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start(): void;
+  stop(): void;
+  abort(): void;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: any) => void;
+  onend: () => void;
+}
+
+// Window interface extension
+declare global {
+  interface Window {
+    SpeechRecognition: {
+      new(): SpeechRecognition;
+    };
+    webkitSpeechRecognition: {
+      new(): SpeechRecognition;
+    };
+  }
+}
+
+export const useSpeechToText = (options?: {
+  continuous?: boolean;
+  lang?: string;
+  onResult?: (text: string) => void;
+}): UseSpeechToTextReturn => {
+  const [isListening, setIsListening] = useState(false);
+  const [transcript, setTranscript] = useState('');
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const retryCountRef = useRef(0);
+  const isListeningRef = useRef(false); // Track state in ref to avoid stale closures in event handlers
+
+  // Update ref whenever state changes
   useEffect(() => {
     isListeningRef.current = isListening;
   }, [isListening]);
 
   useEffect(() => {
-    // Browser Compatibility Check
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    
-    if (!SpeechRecognition) {
-      console.warn("Web Speech API not supported.");
-      return;
-    }
+    // Check for browser support
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = continuous;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
+    if (SpeechRecognition) {
+      recognitionRef.current = new SpeechRecognition();
+      recognitionRef.current.continuous = options?.continuous ?? true; // Default to continuous for dictation
+      recognitionRef.current.interimResults = true; // We want real-time feedback
+      recognitionRef.current.lang = options?.lang || 'en-US';
 
-    recognition.onstart = () => setIsListening(true);
-    recognition.onend = () => setIsListening(false);
-
-    recognition.onresult = (event: any) => {
-      let finalTranscript = "";
-      let interimTranscript = "";
-
-      for (let i = 0; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-          finalTranscript += transcript + " ";
-        } else {
-          interimTranscript += transcript;
+      recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
+        // Loop through results from the resultIndex to avoiding processing old results
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          if (result.isFinal) {
+            const text = result[0].transcript;
+            setTranscript(prev => {
+              const newTranscript = prev ? `${prev} ${text}` : text;
+              return newTranscript;
+            });
+            if (options?.onResult) {
+              options.onResult(text);
+            }
+          }
         }
-      }
-      const fullText = (finalTranscript + interimTranscript).trim();
-      if (fullText) onResult(fullText);
-    };
+      };
 
-    recognitionRef.current = recognition;
+      recognitionRef.current.onerror = (event: any) => {
+        console.error('Speech recognition error', event.error);
+
+        switch (event.error) {
+          case 'not-allowed':
+            toast.error("Microphone access denied", {
+              description: "Please allow microphone permissions in your browser settings."
+            });
+            setIsListening(false);
+            break;
+          case 'network':
+            // Retry logic for network errors (common in Web Speech API)
+            if (retryCountRef.current < 2 && isListeningRef.current) { // Try up to 2 times
+              retryCountRef.current += 1;
+              console.log(`[Speech] Network error, retrying (${retryCountRef.current}/2)...`);
+              setTimeout(() => {
+                // Check ref to see if we still want to be listening
+                if (isListeningRef.current) recognitionRef.current?.start();
+              }, 1000);
+              return; // Don't stop listening yet
+            }
+
+            toast.error("Connection Error", {
+              description: "Speech service unreachable. Please ensure you are online."
+            });
+            setIsListening(false);
+            break;
+          case 'no-speech':
+            // Ignore to keep listening
+            break;
+          case 'audio-capture':
+            toast.error("No Microphone Found", {
+              description: "Please check your microphone settings."
+            });
+            setIsListening(false);
+            break;
+          case 'aborted':
+            // user stopped manually or another instance started
+            setIsListening(false);
+            break;
+          default:
+            console.log("Unhandled speech error:", event.error);
+            setIsListening(false);
+        }
+      };
+
+      recognitionRef.current.onend = () => {
+        // If we are supposed to be listening (and didn't stop due to error), restart
+        // Add a small delay before restarting - Chrome often needs a breather or it will fail immediately
+        if (isListeningRef.current) {
+          retryCountRef.current = 0;
+          setTimeout(() => {
+            if (isListeningRef.current) {
+              try {
+                recognitionRef.current?.start();
+              } catch (e) {
+                // Ignore errors if already started
+              }
+            }
+          }, 300); // 300ms delay to stabilize engine
+        }
+      };
+    }
 
     return () => {
-      // Cleanup on unmount
-      if (recognitionRef.current) recognitionRef.current.abort();
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
     };
-  }, [onResult, continuous]);
+  }, [options?.continuous, options?.lang, options?.onResult]);
 
-  // Stable Start Function
   const startListening = useCallback(() => {
-    if (recognitionRef.current) {
+    if (recognitionRef.current && !isListeningRef.current) {
       try {
         recognitionRef.current.start();
-      } catch (e) {
-        console.error("Mic start error:", e);
+        setIsListening(true);
+        retryCountRef.current = 0;
+        toast.success("Listening...", { description: "Speak clearly." });
+      } catch (error) {
+        console.error('Error starting speech recognition:', error);
       }
+    } else if (!recognitionRef.current) {
+      toast.error("Speech recognition not supported in this browser.");
     }
   }, []);
 
-  // Stable Stop Function
   const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
+    if (recognitionRef.current && isListeningRef.current) {
+      setIsListening(false); // Update state (and ref via effect)
       recognitionRef.current.stop();
+      toast.info("Stopped listening.");
     }
   }, []);
 
-  const toggleListening = useCallback(() => {
-    if (isListeningRef.current) stopListening();
-    else startListening();
-  }, [startListening, stopListening]);
+  const resetTranscript = useCallback(() => {
+    setTranscript('');
+  }, []);
 
-  // --- GLOBAL KEYBOARD SHORTCUT (RIGHT ALT) ---
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // 3. Check for Right Alt AND ignore repeated key presses (holding down)
-      if (event.code === "AltRight" && !event.repeat) {
-        event.preventDefault();
-        
-        // Use the Ref to decide action instantly
-        if (isListeningRef.current) {
-           stopListening();
-        } else {
-           startListening();
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [startListening, stopListening]);
-
-  return { isListening, toggleListening, hasSupport: !!recognitionRef.current };
+  return {
+    isListening,
+    transcript,
+    startListening,
+    stopListening,
+    resetTranscript,
+    hasRecognitionSupport: !!(typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition)),
+  };
 };

@@ -1,0 +1,31 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /app/venv
+      - /app/__pycache__
+    env_file:
+      - .env
+    # Restart on crash
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    # Ensure backend starts first (optional for SPAs but good practice)
+    depends_on:
+      - backend
+    # Hot reloading support needs this
+    environment:
+      - CHOKIDAR_USEPOLLING=true
