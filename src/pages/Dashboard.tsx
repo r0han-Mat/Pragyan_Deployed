@@ -53,6 +53,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("intake");
   const [simActive, setSimActive] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   
   // Refs for logic
   const simActiveRef = useRef(false);
@@ -131,6 +132,7 @@ export default function Dashboard() {
         risk_label: triageResult.risk_label,
         explanation: triageResult.details,
         department: triageResult.referral?.department,
+        chief_complaint: data.Chief_Complaint,
       });
 
       // Entry Toast
@@ -139,10 +141,14 @@ export default function Dashboard() {
         duration: 3000,
       });
 
-      if (!isAuto) setActiveTab("analysis");
+      if (!isAuto) {
+        setActiveTab("analysis");
+        // We'll set the selected patient after we get the newPatient object
+      }
 
       // Immediate Analytics Record (For Graph)
       if (newPatient) {
+        if (!isAuto) setSelectedPatient(newPatient); // Set selected patient for PDF export
         const rawDept = triageResult.referral?.department || "General Medicine";
         try {
            await supabase.from("patient_assignments").insert({
@@ -186,6 +192,7 @@ export default function Dashboard() {
         risk_label: p.risk_label,
         details: p.explanation || "",
       });
+      setSelectedPatient(p);
       setActiveTab("analysis"); 
     }
   };
@@ -300,7 +307,7 @@ export default function Dashboard() {
                   <div className="flex flex-col h-full rounded-2xl border border-[#D4AF37]/50 bg-card/30 shadow-xl overflow-hidden backdrop-blur-md transition-all">
                       <div className="flex-1 overflow-hidden relative rounded-2xl">
                         <div className="absolute inset-0">
-                           <RiskPanel result={result} patients={patients} apiError={error} />
+                           <RiskPanel result={result} patients={patients} apiError={error} selectedPatient={selectedPatient} />
                         </div>
                       </div>
                   </div>

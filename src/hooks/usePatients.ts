@@ -24,6 +24,7 @@ export interface Patient {
   risk_label: string | null;
   explanation: string | null;
   department?: string | null;
+  chief_complaint?: string | null;
   created_at: string;
 }
 
@@ -41,7 +42,7 @@ export function usePatients() {
       .from("patients")
       .select("*")
       .order("created_at", { ascending: false });
-    
+
     if (!error && data) {
       setPatients(sortPatients(data as Patient[]));
     }
@@ -50,7 +51,7 @@ export function usePatients() {
 
   useEffect(() => {
     if (!user) return;
-    
+
     // 1. Initial Fetch
     fetchPatients();
 
@@ -62,7 +63,7 @@ export function usePatients() {
         { event: "INSERT", schema: "public", table: "patients" },
         (payload) => {
           const newPatient = payload.new as Patient;
-          
+
           setPatients((prev) => {
             // Prevent duplicates if Optimistic UI already added it
             if (prev.some((p) => p.id === newPatient.id)) return prev;
@@ -79,7 +80,7 @@ export function usePatients() {
   useEffect(() => {
     const interval = setInterval(() => {
       const now = new Date();
-      
+
       // 
       // CHANGE: Set to exactly 30 seconds as requested
       const cutoffTime = new Date(now.getTime() - 30 * 1000);
@@ -94,7 +95,7 @@ export function usePatients() {
         if (prev.length === active.length && prev[0]?.id === active[0]?.id) return prev;
         return active;
       });
-      
+
     }, 1000);
 
     return () => clearInterval(interval);
@@ -102,7 +103,7 @@ export function usePatients() {
 
   const addPatient = async (patient: Omit<Patient, "id" | "user_id" | "created_at">) => {
     if (!user) return null;
-    const { department, ...patientData } = patient;
+    const { ...patientData } = patient; // Keep department in patientData
 
     // A. Optimistic Update (Immediate UI feedback)
     const tempId = crypto.randomUUID();
@@ -111,7 +112,8 @@ export function usePatients() {
       id: tempId,
       user_id: user.id,
       created_at: new Date().toISOString(),
-      department: department || null, 
+      department: patient.department || null,
+      chief_complaint: patient.chief_complaint || null,
     } as Patient;
 
     setPatients(prev => sortPatients([tempPatient, ...prev]));
@@ -133,7 +135,7 @@ export function usePatients() {
     const confirmedPatient = data as Patient;
 
     // C. Reconcile Optimistic with Real Data
-    setPatients(prev => 
+    setPatients(prev =>
       sortPatients(prev.map(p => (p.id === tempId ? confirmedPatient : p)))
     );
 
