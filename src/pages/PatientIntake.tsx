@@ -1,18 +1,28 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  ChevronLeft, 
-  Stethoscope, 
-  Activity, 
-  User, 
-  FileText, 
+  ChevronLeft,
+  Stethoscope,
+  Activity,
+  User,
+  FileText,
   CheckCircle2,
   Mic,
   MicOff,
-  Shield
+  Shield,
+  Phone,
+  MapPin,
+  Ambulance,
+  Hospital,
+  Loader2,
+  Calendar,
+  Upload,
+  Heart,
+  Thermometer,
+  Zap,
+  Navigation
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,20 +30,31 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useTriage, PatientInput } from "@/hooks/useTriage";
-import RiskPanel from "@/components/RiskPanel";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { parseVoiceInput } from "@/utils/voiceParser";
+import VitalsMonitor from "@/components/VitalsMonitor";
+import { supabase } from "@/integrations/supabase/client";
 
-// Simplified form state
 interface SimpleFormState {
   name: string;
   age: string;
   gender: string;
   symptoms: string;
+  emergencyName: string;
+  emergencyPhone: string;
+}
+
+// Interface for Real Hospital Data
+interface HospitalData {
+  name: string;
+  lat: string;
+  lon: string;
+  address: string;
+  distance?: number;
 }
 
 export default function PatientIntake() {
-  const { predict, loading, result, setResult, error } = useTriage();
+  const { predict, loading, result, setResult } = useTriage();
   const [step, setStep] = useState<"form" | "result">("form");
   
   const [form, setForm] = useState<SimpleFormState>({
@@ -41,28 +62,40 @@ export default function PatientIntake() {
     age: "",
     gender: "",
     symptoms: "",
+    emergencyName: "",
+    emergencyPhone: "",
   });
 
-  // Store extracted vitals/history that might be spoken but not visible in the simple form
+  // --- WEARABLE SIMULATION (Dummy) ---
+  const [wearableConnected, setWearableConnected] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+
+  const handleConnectWearable = () => {
+    setConnecting(true);
+    setTimeout(() => {
+      setConnecting(false);
+      setWearableConnected(true);
+      toast.success("Wearable Device Connected", {
+         description: "Receiving live telemetry from device WBL-2026-XJ"
+      });
+    }, 1500); 
+  };
+
   const [extractedData, setExtractedData] = useState<Partial<PatientInput>>({});
 
-  // Voice Handler
+  // --- REAL VOICE LOGIC ---
   const handleVoiceResult = (text: string) => {
-    // 1. Update text area for feedback
     setForm(prev => ({ 
       ...prev, 
       symptoms: prev.symptoms ? `${prev.symptoms} ${text}` : text 
     }));
 
-    // 2. Parse for entities
     const { extracted } = parseVoiceInput(text);
     
-    // 3. Auto-fill visible form fields if detected
     if (extracted.name) setForm(prev => ({ ...prev, name: extracted.name! }));
     if (extracted.Age) setForm(prev => ({ ...prev, age: extracted.Age!.toString() }));
     if (extracted.Gender) setForm(prev => ({ ...prev, gender: extracted.Gender! }));
 
-    // 4. Store other extracted medical data (vitals, history)
     const { name, Age, Gender, ...others } = extracted as any;
     setExtractedData(prev => ({ ...prev, ...others }));
   };
@@ -72,17 +105,142 @@ export default function PatientIntake() {
     continuous: true 
   });
 
+  // --- REAL SMS LOGIC ---
+  const [sendingSms, setSendingSms] = useState(false);
+  
+  const handleSendSMS = async () => {
+    if (!form.emergencyPhone) {
+      toast.error("Phone Number Required", { description: "Please enter a number to send alerts." });
+      return;
+    }
+
+    setSendingSms(true);
+    try {
+      const { error } = await supabase.functions.invoke('send-emergency-sms', {
+        body: { 
+          to: form.emergencyPhone, 
+          patient: form.name || "A Patient",
+          location: "PARS Kiosk #4" 
+        }
+      });
+
+      if (error) throw error;
+      toast.success("SMS Alert Sent", { description: `Notification sent to ${form.emergencyPhone}` });
+
+    } catch (err) {
+      const message = `EMERGENCY ALERT: ${form.name || "The patient"} is currently at the hospital kiosk requesting assistance.`;
+      window.open(`sms:${form.emergencyPhone}?body=${encodeURIComponent(message)}`, '_self');
+      toast.info("Opening SMS App", { description: "Using device messenger as fallback." });
+    } finally {
+      setSendingSms(false);
+    }
+  };
+
+  // --- REAL AMBULANCE LOGIC ---
+  const handleCallAmbulance = () => {
+    window.location.href = "tel:108"; 
+    toast.warning("Dialing Emergency Services...", { duration: 2000 });
+  };
+
+  // --- REAL HOSPITAL LOCATOR LOGIC (Global Support) ---
+  const [nearestHospital, setNearestHospital] = useState<HospitalData | null>(null);
+  const [locating, setLocating] = useState(false);
+
+  useEffect(() => {
+    if (step === "result" && !nearestHospital) {
+      setLocating(true);
+      
+      if (!navigator.geolocation) {
+        toast.error("Geolocation not supported by this browser.");
+        setLocating(false);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          
+          try {
+            // Create a Dynamic "Bounding Box" (~20km radius)
+            // This prevents finding a "Hospital" city in Spain by forcing the API to look locally.
+            const offset = 0.2; 
+            const minLon = longitude - offset;
+            const maxLon = longitude + offset;
+            const minLat = latitude - offset;
+            const maxLat = latitude + offset;
+
+            // Query OpenStreetMap (Nominatim) with 'viewbox' and 'bounded=1'
+            const response = await fetch(
+              `https://nominatim.openstreetmap.org/search?format=json&q=hospital&limit=1&viewbox=${minLon},${maxLat},${maxLon},${minLat}&bounded=1`
+            );
+            const data = await response.json();
+
+            if (data && data.length > 0) {
+              const hospital = data[0];
+              setNearestHospital({
+                name: hospital.name || "Local Emergency Center",
+                lat: hospital.lat,
+                lon: hospital.lon,
+                address: hospital.display_name
+              });
+              toast.success("Nearest Facility Located", { description: hospital.name });
+            } else {
+              // Smart Fallback: If "Hospital" returns nothing, search for "Clinic"
+              const fallbackResponse = await fetch(
+                 `https://nominatim.openstreetmap.org/search?format=json&q=clinic&limit=1&viewbox=${minLon},${maxLat},${maxLon},${minLat}&bounded=1`
+              );
+              const fallbackData = await fallbackResponse.json();
+              
+              if(fallbackData && fallbackData.length > 0) {
+                 const clinic = fallbackData[0];
+                 setNearestHospital({
+                    name: clinic.name || "Medical Clinic",
+                    lat: clinic.lat,
+                    lon: clinic.lon,
+                    address: clinic.display_name
+                 });
+                 toast.success("Nearest Clinic Located", { description: clinic.name });
+              } else {
+                 throw new Error("No facilities found nearby.");
+              }
+            }
+          } catch (error) {
+            console.error("Map Error:", error);
+            // Only fallback if absolutely necessary
+            setNearestHospital({
+              name: "Emergency Services",
+              lat: latitude.toString(),
+              lon: longitude.toString(),
+              address: "Detected Location (Map Data Unavailable)"
+            });
+          } finally {
+            setLocating(false);
+          }
+        },
+        (error) => {
+          console.error("GPS Error:", error);
+          let errorMsg = "Location Access Required";
+          if (error.code === 1) errorMsg = "Please allow location access to find hospitals.";
+          else if (error.code === 2) errorMsg = "GPS signal unavailable.";
+          else if (error.code === 3) errorMsg = "Location request timed out.";
+          
+          toast.error(errorMsg);
+          setLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
+    }
+  }, [step]); 
+
+  // --- FORM SUBMISSION ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Construct full payload: Form Data + Extracted Vitals + Defaults
     const payload: PatientInput & { name: string } = {
       name: form.name,
       Age: parseInt(form.age) || 30,
       Gender: form.gender || "Male",
       Chief_Complaint: form.symptoms,
-      
-      // Defaults first
       Heart_Rate: 75,
       Systolic_BP: 120,
       Diastolic_BP: 80,
@@ -95,8 +253,6 @@ export default function PatientIntake() {
       Diabetes: false,
       Hypertension: false,
       Heart_Disease: false,
-
-      // Overwrite with any extracted voice data
       ...extractedData
     };
 
@@ -127,7 +283,7 @@ export default function PatientIntake() {
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col items-center justify-center p-4 z-10 overflow-hidden">
+      <main className="flex-1 flex flex-col items-center justify-center p-4 z-10 overflow-hidden bg-dot-pattern">
         
         <AnimatePresence mode="wait">
           
@@ -138,27 +294,19 @@ export default function PatientIntake() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="w-full max-w-2xl"
+              className="w-full max-w-3xl flex flex-col max-h-full"
             >
-              <div className="rounded-2xl border border-border bg-card/40 shadow-2xl backdrop-blur-xl overflow-hidden">
+              <div className="rounded-2xl border border-border bg-card/80 shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col max-h-[85vh]">
                 
-                {/* Card Header */}
-                <div className="border-b border-border bg-white/5 p-6 flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="p-2 rounded-lg bg-blue-500/10 text-blue-500">
-                        <FileText className="h-5 w-5" />
-                      </div>
-                      <h2 className="text-xl font-bold font-serif-display">Patient Intake</h2>
-                    </div>
-                    <p className="text-sm text-muted-foreground ml-1">
-                      Please provide your details below.
-                    </p>
-                  </div>
-
-                  <div className="flex gap-2">
-                     {/* OCR UPLOAD */}
-                     <div className="relative">
+                {/* 1. AUTO-FILL TOOLBAR */}
+                <div className="bg-muted/30 border-b border-border p-3 flex items-center justify-between gap-4">
+                   <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-2">Quick Fill Options:</span>
+                   </div>
+                   
+                   <div className="flex items-center gap-2">
+                      {/* OCR UPLOAD */}
+                      <div className="relative">
                         <input 
                            type="file" 
                            id="ehr-upload" 
@@ -167,181 +315,243 @@ export default function PatientIntake() {
                            onChange={async (e) => {
                               const file = e.target.files?.[0];
                               if (!file) return;
-
                               const formData = new FormData();
                               formData.append("file", file);
-
-                              const toastId = toast.loading("Analyzing details...");
-
+                              const toastId = toast.loading("Uploading & Parsing Document...");
                               try {
-                                 const res = await fetch("http://localhost:8000/parse-document", {
-                                    method: "POST",
-                                    body: formData
-                                 });
+                                 const res = await fetch("http://localhost:8000/parse-document", { method: "POST", body: formData });
                                  const data = await res.json();
                                  if (data.data) {
                                     const extracted = data.data;
-                                    
-                                    // Auto-fill form
                                     setForm(prev => ({
+                                       ...prev,
                                        name: extracted.name || prev.name,
                                        age: extracted.Age ? extracted.Age.toString() : prev.age,
                                        gender: extracted.Gender || prev.gender,
                                        symptoms: extracted.Chief_Complaint || prev.symptoms
                                     }));
-                                    
-                                    // Store vitals
                                     setExtractedData(prev => ({ ...prev, ...extracted }));
-                                    toast.success("EHR Parsed Successfully", { id: toastId });
+                                    toast.success("EHR Data Extracted Successfully", { id: toastId });
                                  }
                               } catch (err) {
-                                 toast.error("Failed to parse document", { id: toastId });
+                                 toast.error("OCR Service Unavailable", { id: toastId });
                               }
                            }}
                         />
                         <Label 
                            htmlFor="ehr-upload" 
-                           className="flex items-center gap-2 h-9 px-4 rounded-md border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 cursor-pointer transition-all text-sm font-medium"
+                           className="flex items-center gap-2 h-8 px-3 rounded-md bg-background border border-border hover:border-primary/50 cursor-pointer transition-all text-xs font-medium shadow-sm"
                         >
-                           <FileText className="h-4 w-4" /> Upload EHR
+                           <Upload className="h-3 w-3 text-primary" /> Upload Medical Record
                         </Label>
-                     </div>
-
-                     {/* VOICE INDICATOR */}
-                     {hasSupport && (
-                       <Button 
-                         variant="outline" 
-                         onClick={toggleListening}
-                         className={`gap-2 transition-all duration-500 ${
-                           isListening 
-                             ? "border-red-500 bg-red-500/10 text-red-500 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]" 
-                             : "border-primary/30 hover:bg-primary/5 text-muted-foreground"
-                         }`}
-                       >
-                         {isListening ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-                         {isListening ? "Listening..." : "Voice Input"}
-                       </Button>
-                     )}
-                  </div>
-                </div>
-
-                {/* Form Body */}
-                <div className="p-6">
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    
-                    {/* Demographics Row */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="name" className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Full Name</Label>
-                        <div className="relative">
-                          <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                          <Input 
-                            id="name"
-                            required
-                            placeholder="e.g. Jane Doe"
-                            value={form.name}
-                            onChange={e => setForm({...form, name: e.target.value})}
-                            className="bg-background/50 border-border focus:ring-primary/20 pl-9"
-                          />
-                        </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="age" className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Age</Label>
-                          <Input 
-                            id="age"
-                            required
-                            type="number"
-                            placeholder="30"
-                            value={form.age}
-                            onChange={e => setForm({...form, age: e.target.value})}
-                            className="bg-background/50 border-border focus:ring-primary/20"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="gender" className="text-xs font-bold uppercase text-muted-foreground tracking-wider">Gender</Label>
-                          <Select required value={form.gender} onValueChange={v => setForm({...form, gender: v})}>
-                            <SelectTrigger className="bg-background/50 border-border">
-                              <SelectValue placeholder="Select" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Male">Male</SelectItem>
-                              <SelectItem value="Female">Female</SelectItem>
-                              <SelectItem value="Other">Other</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Symptoms Area */}
-                    <div className="space-y-2 relative">
-                      <div className="flex justify-between items-center">
-                        <Label htmlFor="symptoms" className="text-xs font-bold uppercase text-muted-foreground tracking-wider flex items-center gap-2">
-                          <Stethoscope className="h-3 w-3" /> Chief Complaint / Symptoms
-                        </Label>
-                        
-                        {/* Extracted Data Badges */}
-                        <div className="flex gap-2">
-                           {extractedData.Heart_Rate && <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">HR: {extractedData.Heart_Rate}</span>}
-                           {extractedData.Temperature && <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/20">Temp: {extractedData.Temperature}°</span>}
-                           {extractedData.Systolic_BP && <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">BP: {extractedData.Systolic_BP}/{extractedData.Diastolic_BP}</span>}
-                        </div>
-                      </div>
-
-                      <div className={`relative transition-all ${isListening ? "ring-2 ring-primary/50 rounded-md" : ""}`}>
-                        <Textarea 
-                          id="symptoms"
-                          required
-                          rows={8}
-                          placeholder={isListening ? "Listening... Speak naturally." : "Describe what you are feeling OR click 'Voice Input' to speak..."}
-                          value={form.symptoms}
-                          onChange={e => setForm({...form, symptoms: e.target.value})}
-                          className="bg-background/50 border-border focus:ring-primary/20 resize-none text-base pr-12"
-                        />
-                        
+                      {/* VOICE INPUT */}
+                      {hasSupport && (
                         <button
                           type="button"
                           onClick={toggleListening}
-                          className={`absolute right-3 bottom-3 p-2 rounded-full transition-all ${
-                             isListening 
-                             ? "bg-red-500 text-white animate-pulse shadow-lg" 
-                             : "bg-primary/10 text-primary hover:bg-primary/20"
+                          className={`flex items-center gap-2 h-8 px-3 rounded-md border transition-all text-xs font-medium shadow-sm ${
+                            isListening 
+                              ? "bg-red-500/10 border-red-500 text-red-500 animate-pulse" 
+                              : "bg-background border-border hover:border-primary/50"
                           }`}
                         >
-                          {isListening ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+                          {isListening ? <Mic className="h-3 w-3" /> : <MicOff className="h-3 w-3 text-primary" />}
+                          {isListening ? "Listening..." : "Dictate Symptoms"}
                         </button>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground text-right">*You can dictate symptoms, age, and vitals.</p>
+                      )}
+                   </div>
+                </div>
+
+                {/* 2. FORM BODY */}
+                <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-thumb-primary/10">
+                  <form onSubmit={handleSubmit} className="space-y-8">
+                    
+                    {/* SECTION: PATIENT IDENTITY */}
+                    <div className="space-y-4">
+                       <h3 className="text-sm font-bold text-foreground flex items-center gap-2 border-b border-border pb-2">
+                          <User className="h-4 w-4 text-primary" /> Patient Identity
+                       </h3>
+                       
+                       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                          {/* Name */}
+                          <div className="md:col-span-6 space-y-2">
+                             <Label htmlFor="name" className="text-xs text-muted-foreground font-medium">Full Name</Label>
+                             <div className="relative group">
+                                <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                <Input 
+                                   id="name"
+                                   required
+                                   placeholder="e.g. Jane Doe"
+                                   value={form.name}
+                                   onChange={e => setForm({...form, name: e.target.value})}
+                                   className="pl-9 bg-background/50 h-10"
+                                />
+                             </div>
+                          </div>
+
+                          {/* Age */}
+                          <div className="md:col-span-3 space-y-2">
+                             <Label htmlFor="age" className="text-xs text-muted-foreground font-medium">Age</Label>
+                             <div className="relative group">
+                                <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                                <Input 
+                                   id="age"
+                                   type="number"
+                                   required
+                                   placeholder="00"
+                                   value={form.age}
+                                   onChange={e => setForm({...form, age: e.target.value})}
+                                   className="pl-9 bg-background/50 h-10"
+                                />
+                             </div>
+                          </div>
+
+                          {/* Gender */}
+                          <div className="md:col-span-3 space-y-2">
+                             <Label htmlFor="gender" className="text-xs text-muted-foreground font-medium">Gender</Label>
+                             <Select required value={form.gender} onValueChange={v => setForm({...form, gender: v})}>
+                                <SelectTrigger className="bg-background/50 h-10">
+                                   <SelectValue placeholder="Select" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                   <SelectItem value="Male">Male</SelectItem>
+                                   <SelectItem value="Female">Female</SelectItem>
+                                   <SelectItem value="Other">Other</SelectItem>
+                                </SelectContent>
+                             </Select>
+                          </div>
+                       </div>
                     </div>
 
-                    {/* Action Footer */}
-                    <div className="pt-2">
-                      <Button 
-                        type="submit" 
-                        disabled={loading}
-                        className="w-full h-12 text-base font-semibold shadow-lg hover:shadow-primary/25 transition-all"
-                      >
-                        {loading ? (
-                          <span className="flex items-center gap-2">
-                            <Activity className="h-4 w-4 animate-spin" /> Analyzing Vitals...
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-2">
-                            Submit for Assessment <CheckCircle2 className="h-4 w-4" />
-                          </span>
-                        )}
-                      </Button>
+                    {/* SECTION: SYMPTOMS & VITALS */}
+                    <div className="space-y-4">
+                       <div className="flex items-center justify-between border-b border-border pb-2">
+                          <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                             <Stethoscope className="h-4 w-4 text-primary" /> Chief Complaint
+                          </h3>
+                          {/* Live Vitals Badges (if detected via voice) */}
+                          {(extractedData.Heart_Rate || extractedData.Temperature) && (
+                             <div className="flex gap-2">
+                                {extractedData.Heart_Rate && (
+                                   <div className="flex items-center gap-1 text-[10px] bg-red-500/10 text-red-500 px-2 py-1 rounded-full border border-red-500/20">
+                                      <Heart className="h-3 w-3" /> {extractedData.Heart_Rate} BPM
+                                   </div>
+                                )}
+                                {extractedData.Temperature && (
+                                   <div className="flex items-center gap-1 text-[10px] bg-orange-500/10 text-orange-500 px-2 py-1 rounded-full border border-orange-500/20">
+                                      <Thermometer className="h-3 w-3" /> {extractedData.Temperature}°C
+                                   </div>
+                                )}
+                             </div>
+                          )}
+                       </div>
+
+                       <div className="relative">
+                          <Textarea 
+                             id="symptoms"
+                             required
+                             rows={6}
+                             placeholder="Describe your symptoms in detail... (e.g., 'Sharp pain in chest since morning')"
+                             value={form.symptoms}
+                             onChange={e => setForm({...form, symptoms: e.target.value})}
+                             className={`bg-background/50 min-h-[140px] text-base resize-none focus:ring-primary/20 transition-all ${isListening ? "ring-2 ring-red-500/50 border-red-500/50" : ""}`}
+                          />
+                          
+                          {/* FLOATING VOICE BUTTON */}
+                          {hasSupport && (
+                            <button
+                              type="button"
+                              onClick={toggleListening}
+                              className={`absolute right-3 bottom-3 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all shadow-md
+                                ${isListening 
+                                  ? "bg-red-500 text-white animate-pulse" 
+                                  : "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+                                }`}
+                            >
+                              {isListening ? (
+                                <>
+                                  <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                                  </span>
+                                  Listening...
+                                </>
+                              ) : (
+                                <>
+                                  <Mic className="h-3.5 w-3.5" />
+                                  Dictate
+                                </>
+                              )}
+                            </button>
+                          )}
+                       </div>
+                    </div>
+
+                    {/* SECTION: EMERGENCY CONTACT */}
+                    <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-4">
+                       <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-primary" /> Emergency Contact
+                       </h3>
+                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                             <Label htmlFor="ename" className="text-xs text-muted-foreground font-medium">Contact Name</Label>
+                             <div className="relative">
+                                <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                   id="ename"
+                                   placeholder="Relative Name"
+                                   value={form.emergencyName}
+                                   onChange={e => setForm({...form, emergencyName: e.target.value})}
+                                   className="pl-9 bg-white/40 border-primary/10 h-10"
+                                />
+                             </div>
+                          </div>
+                          <div className="space-y-2">
+                             <Label htmlFor="ephone" className="text-xs text-muted-foreground font-medium">Phone Number</Label>
+                             <div className="relative">
+                                <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                   id="ephone"
+                                   type="tel"
+                                   placeholder="(555) 000-0000"
+                                   value={form.emergencyPhone}
+                                   onChange={e => setForm({...form, emergencyPhone: e.target.value})}
+                                   className="pl-9 bg-white/40 border-primary/10 h-10"
+                                />
+                             </div>
+                          </div>
+                       </div>
                     </div>
 
                   </form>
                 </div>
+
+                {/* 3. FOOTER */}
+                <div className="p-4 border-t border-border bg-muted/20">
+                   <Button 
+                      onClick={handleSubmit}
+                      disabled={loading}
+                      className="w-full h-12 text-base font-bold shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all rounded-xl"
+                   >
+                      {loading ? (
+                         <span className="flex items-center gap-2">
+                            <Loader2 className="h-5 w-5 animate-spin" /> Processing Assessment...
+                         </span>
+                      ) : (
+                         <span className="flex items-center gap-2">
+                            Submit for Triage <CheckCircle2 className="h-5 w-5" />
+                         </span>
+                      )}
+                   </Button>
+                </div>
+
               </div>
             </motion.div>
           )}
 
-          {/* --- VIEW 2: RESULTS --- */}
+          {/* --- VIEW 2: RESULTS (Enhanced with Real Map) --- */}
           {step === "result" && result && (
              <motion.div 
                key="result"
@@ -357,16 +567,151 @@ export default function PatientIntake() {
                  </div>
                  <Button 
                    variant="outline" 
-                   onClick={() => { setStep("form"); setResult(null); setForm({name:"", age:"", gender:"", symptoms:""}); setExtractedData({}); }}
+                   onClick={() => { setStep("form"); setResult(null); setForm({name:"", age:"", gender:"", symptoms:"", emergencyName: "", emergencyPhone: ""}); setExtractedData({}); setNearestHospital(null); }}
                    className="gap-2"
                  >
                    <ChevronLeft className="h-4 w-4" /> New Check-In
                  </Button>
                </div>
 
-               <div className="flex-1 flex flex-col rounded-2xl border border-border bg-card/40 shadow-2xl overflow-hidden backdrop-blur-xl relative">
-                  <div className="absolute inset-0 overflow-hidden">
-                     <RiskPanel result={result} patients={[]} apiError={error} />
+               <div className="flex-1 overflow-y-auto px-1">
+                  <div className="flex flex-col gap-6 max-w-4xl mx-auto pb-10">
+                      
+                      {/* 1. RECOMMENDED DEPARTMENT CARD */}
+                      <div className="rounded-xl border border-border bg-card/60 backdrop-blur-md overflow-hidden shadow-lg">
+                         <div className="p-6 flex flex-col items-center text-center space-y-4">
+                            <div className="space-y-1">
+                              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Recommended Department:</p>
+                              <h2 className="text-3xl font-black font-serif-display text-primary uppercase">
+                                  {result.referral?.department.replace(/_/g, " ") || "General Medicine"}
+                              </h2>
+                              <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                                  {result.details}
+                              </p>
+                            </div>
+                         </div>
+                      </div>
+
+                      {/* 2. REAL HOSPITAL MAP SECTION */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 h-[300px]">
+                         
+                         {/* INFO CARD */}
+                         <div className="rounded-xl border border-border bg-card/60 p-6 flex flex-col justify-between">
+                            <div>
+                               <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-4">
+                                  <MapPin className="h-4 w-4 text-primary" /> Nearest Facility
+                               </h3>
+                               {locating ? (
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                     <Loader2 className="h-4 w-4 animate-spin" /> Locating nearest hospital...
+                                  </div>
+                               ) : nearestHospital ? (
+                                  <div className="space-y-2">
+                                     <h2 className="text-xl font-bold text-foreground leading-tight">
+                                        {nearestHospital.name}
+                                     </h2>
+                                     <p className="text-xs text-muted-foreground line-clamp-3">
+                                        {nearestHospital.address}
+                                     </p>
+                                  </div>
+                               ) : (
+                                  <p className="text-sm text-muted-foreground">Location data unavailable.</p>
+                               )}
+                            </div>
+
+                            <Button 
+                               className="w-full gap-2 mt-4" 
+                               disabled={!nearestHospital}
+                               onClick={() => {
+                                  if (nearestHospital) {
+                                     // Open Real Google Maps Navigation
+                                     window.open(`https://www.google.com/maps/dir/?api=1&destination=${nearestHospital.lat},${nearestHospital.lon}`, '_blank');
+                                  }
+                               }}
+                            >
+                               <Navigation className="h-4 w-4" /> Navigate Now
+                            </Button>
+                         </div>
+
+                         {/* MAP EMBED */}
+                         <div className="rounded-xl border border-border bg-black/10 overflow-hidden relative">
+                            {nearestHospital ? (
+                               <iframe
+                                  width="100%"
+                                  height="100%"
+                                  frameBorder="0"
+                                  scrolling="no"
+                                  marginHeight={0}
+                                  marginWidth={0}
+                                  // Using OpenStreetMap Embed (Free & Real) based on detected Lat/Lon
+                                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${parseFloat(nearestHospital.lon)-0.01}%2C${parseFloat(nearestHospital.lat)-0.01}%2C${parseFloat(nearestHospital.lon)+0.01}%2C${parseFloat(nearestHospital.lat)+0.01}&layer=mapnik&marker=${nearestHospital.lat}%2C${nearestHospital.lon}`}
+                                  className="w-full h-full opacity-80 hover:opacity-100 transition-opacity"
+                               ></iframe>
+                            ) : (
+                               <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
+                                  {locating ? "Acquiring GPS..." : "Map Unavailable"}
+                               </div>
+                            )}
+                         </div>
+                      </div>
+
+                      {/* 3. EMERGENCY ACTIONS ROW */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         {/* CALL AMBULANCE */}
+                         <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-full bg-red-500/10 flex items-center justify-center shrink-0">
+                               <Ambulance className="h-6 w-6 text-red-500" />
+                            </div>
+                            <div>
+                               <h4 className="font-bold text-red-500">Call Ambulance</h4>
+                               <p className="text-xs text-red-400/80 mb-2">Immediate dispatch.</p>
+                               <Button size="sm" variant="destructive" className="w-full bg-red-500 hover:bg-red-600" onClick={handleCallAmbulance}>
+                                  Call 108 Now
+                               </Button>
+                            </div>
+                         </div>
+
+                         {/* NOTIFY CONTACT */}
+                         <div className="rounded-xl border border-blue-500/20 bg-blue-500/5 p-4 flex items-center gap-4">
+                            <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0">
+                               <Phone className="h-6 w-6 text-blue-500" />
+                            </div>
+                            <div className="flex-1">
+                               <h4 className="font-bold text-blue-500">Notify Emergency Contact</h4>
+                               <p className="text-xs text-blue-400/80 mb-2">{form.emergencyName || "Family/Friend"}</p>
+                               <Button size="sm" variant="default" className="w-full bg-blue-500 hover:bg-blue-600" onClick={handleSendSMS} disabled={sendingSms}>
+                                  {sendingSms ? <Loader2 className="h-3 w-3 animate-spin" /> : "Send SMS Alert"}
+                               </Button>
+                            </div>
+                         </div>
+                      </div>
+
+                      {/* 4. WEARABLE (Dummy) */}
+                      {/* 4. WEARABLE (Dummy) */}
+                      {!wearableConnected ? (
+                         <div className="rounded-xl border border-dashed border-border bg-black/5 p-6 flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"><Activity className="h-5 w-5 text-primary" /></div>
+                               <div><h4 className="font-bold text-sm">Wearable Device</h4><p className="text-xs text-muted-foreground">Sync for live vitals.</p></div>
+                            </div>
+                            <Button size="sm" onClick={handleConnectWearable} disabled={connecting}>{connecting ? "Connecting..." : "Connect"}</Button>
+                         </div>
+                      ) : (
+                        <motion.div 
+                           initial={{ opacity: 0, scale: 0.95 }}
+                           animate={{ opacity: 1, scale: 1 }}
+                           className="space-y-2"
+                        >  
+                           <div className="flex items-center justify-between px-2">
+                              <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                 <Activity className="h-4 w-4 text-green-500" /> Live Vitals Stream
+                              </h3>
+                              <span className="text-[10px] font-mono text-green-500 animate-pulse">● LIVE</span>
+                           </div>
+                           <VitalsMonitor />
+                        </motion.div>
+                      )}
+
                   </div>
                </div>
              </motion.div>

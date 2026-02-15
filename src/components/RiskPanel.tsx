@@ -319,6 +319,7 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
       </div>
 
       <ScrollArea className="relative z-10 flex-1 px-5 py-6">
+
         <div className="space-y-8">
           
           {/* Error State */}
