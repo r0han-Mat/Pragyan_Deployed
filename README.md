@@ -6,7 +6,7 @@
 
 PARS is a state-of-the-art **AI-Powered Triage System** designed to revolutionize emergency room efficiency. By leveraging machine learning and real-time data processing, PARS automatically prioritizes patients based on vital signs and chief complaints, ensuring that critical cases receive immediate attention.
 
-# Project Title: AI-Powered Smart Patient Triage System
+# Project Title: AI-Powered Smart Patient Triage System (Hackathon Winner)
 ## 1. Tech Stack
 - **Frontend:** React (Vite), Tailwind CSS, Framer Motion (for smooth animations), Lucide React (icons), Recharts (for risk charts).
 - **Backend:** Python FastAPI (standard for ML integration).
@@ -23,27 +23,28 @@ The system follows a modern **Client-Server Architecture** with a decoupled AI E
 
 ```mermaid
 graph TD
-    Client[Frontend (React + Vite)]
-    API[Backend API (FastAPI)]
-    ML[ML Engine (TensorFlow/Keras + Scikit-Learn)]
-    NLP[NLP Engine (SentenceTransformers)]
-    DB[(Supabase PostgreSQL)]
-    Ext[External APIs (OpenStreetMap)]
 
-    Client -->|REST API / JSON| API
-    API <-->|Inference| ML
-    API <-->|Semantic Search| NLP
-    API <-->|Read/Write| DB
-    Client <-->|Geolocation & Maps| Ext
-    
-    subgraph "Admin Dashboard"
-        Client
-    end
-    
-    subgraph "AI Core"
-        ML
-        NLP
-    end
+Client["Frontend (React + Vite)"]
+API["Backend API (FastAPI)"]
+ML["ML Engine (TensorFlow / Keras + Scikit-Learn)"]
+NLP["NLP Engine (SentenceTransformers)"]
+DB["Database (Supabase PostgreSQL)"]
+EXT["External APIs (OpenStreetMap)"]
+
+Client -->|"REST API / JSON"| API
+API -->|"Inference"| ML
+API -->|"Semantic Processing"| NLP
+API -->|"Read / Write"| DB
+Client -->|"Geolocation"| EXT
+
+subgraph Admin Dashboard
+Client
+end
+
+subgraph AI Core
+ML
+NLP
+end
 ```
 
 ---
@@ -99,17 +100,20 @@ To prevent AI errors in critical scenarios, we implement **Rule-Based Overrides*
 
 ```mermaid
 graph TD
-    Start[Patient Input] -->|Vitals| Guard{Critical Check}
-    
-    Guard -- "HR > 180 OR O2 < 85%" --> Critical[🔴 HIGH RISK (Critical)]
-    Guard -- "GCS <= 8 (Coma)" --> Critical
-    
-    Guard -- "Safe" --> Model[Neural Network]
-    Model --> Score[Risk Score (0-1)]
-    
-    Score -- "> 0.75" --> High[🔴 HIGH]
-    Score -- "> 0.40" --> Med[🟡 MEDIUM]
-    Score -- "< 0.40" --> Low[🟢 LOW]
+
+Start["Patient Input"] --> Guard{"Critical Condition Check"}
+
+Guard -->|"HR > 180"| Critical["HIGH RISK - Critical"]
+Guard -->|"O2 < 85%"| Critical
+Guard -->|"GCS <= 8"| Critical
+
+Guard -->|"Otherwise"| Model["Neural Network Inference"]
+
+Model --> Score["Risk Score Generated"]
+
+Score -->|"Score > 0.75"| High["HIGH RISK"]
+Score -->|"Score > 0.40"| Medium["MEDIUM RISK"]
+Score -->|"Score <= 0.40"| Low["LOW RISK"]
 ```
 
 ### **3. NLP Department Classifier**
