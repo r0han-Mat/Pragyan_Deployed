@@ -261,7 +261,7 @@ export default function PatientIntake() {
   };
 
   return (
-    <div className="flex h-screen flex-col text-foreground font-sans selection:bg-primary/20 overflow-hidden relative">
+    <div className="flex h-dvh flex-col text-foreground font-sans selection:bg-primary/20 overflow-hidden relative">
 
       {/* Header */}
       <header className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card/50 px-6 backdrop-blur-md z-10">
@@ -294,9 +294,9 @@ export default function PatientIntake() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="w-full max-w-3xl flex flex-col max-h-full"
+              className="w-full max-w-3xl flex flex-col h-full md:h-auto md:max-h-[85vh]"
             >
-              <div className="rounded-2xl border border-border bg-card/80 shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col max-h-[85vh]">
+              <div className="rounded-2xl border border-border bg-card/80 shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col h-full md:h-auto">
                 
                 {/* 1. AUTO-FILL TOOLBAR */}
                 <div className="bg-muted/30 border-b border-border p-3 flex items-center justify-between gap-4">

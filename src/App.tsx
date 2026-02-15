@@ -20,7 +20,16 @@ const InnerApp = () => {
     return (
         <>
             {!isLoginPage && (
-                <ParticleBackground />
+                <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="fixed inset-0 min-w-full min-h-full object-cover z-0 pointer-events-none"
+                    style={{ filter: "brightness(0.6)" }} 
+                >
+                    <source src="/rest-site.mp4" type="video/mp4" />
+                </video>
             )}
             <div style={{ position: 'relative', zIndex: 10 }}>
                 <Routes>
