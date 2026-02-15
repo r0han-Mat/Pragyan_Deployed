@@ -11,7 +11,7 @@ from typing import Optional, List, Dict, Any
 from ml_service import TriageModel
 from fastapi import FastAPI, UploadFile, File
 from doc_parser import extract_vitals_from_pdf
-from dept_service import get_referral
+from dept_service import get_referral, get_department
 
 app = FastAPI(title="PARS Triage API", version="1.0.0")
 
@@ -89,6 +89,32 @@ def predict(patient: PatientInput):
     result["referral"] = referral_data
     
     return result
+
+class SelfCheckInInput(BaseModel):
+    name: str
+    age: int
+    gender: str
+    symptoms: str
+
+@app.post("/self-check-in", response_model=TriageResponse)
+def self_check_in(data: SelfCheckInInput):
+    """
+    Simplified check-in for non-emergency cases. 
+    Always returns LOW risk and determines department based on symptoms.
+    """
+    # 1. Determine Department
+    dept = get_department(data.symptoms)
+    
+    # 2. Get Doctors/Referral Data
+    referral_data = get_referral(data.symptoms)
+    
+    # 3. Construct Response
+    return {
+        "risk_score": 0.1,
+        "risk_label": "LOW",
+        "details": f"Self check-in completed. Based on '{data.symptoms}', we recommend visiting {dept.replace('_', ' ')}.",
+        "referral": referral_data
+    }
 
 @app.post("/parse-document")
 async def parse_document(file: UploadFile = File(...)):
