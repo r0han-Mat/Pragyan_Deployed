@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { usePatients, Patient } from "@/hooks/usePatients";
 import { useTriage, PatientInput } from "@/hooks/useTriage";
+import { useTranslation } from "react-i18next";
 import PatientQueue from "@/components/PatientQueue";
 import TriageForm from "@/components/TriageForm";
 import RiskPanel from "@/components/RiskPanel";
@@ -19,9 +20,11 @@ import {
   LayoutDashboard, 
   Stethoscope,
   Plus,
-  Zap
+  Zap,
+  Globe
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const RANDOM_NAMES = ["J. Smith", "M. Garcia", "A. Chen", "R. Patel", "K. Williams", "S. Johnson", "D. Brown", "L. Martinez", "T. Anderson", "N. Taylor"];
 
@@ -49,6 +52,7 @@ export default function Dashboard() {
   const { user, signOut } = useAuth();
   const { activePatients, patients, addPatient } = usePatients();
   const { predict, loading, error, result, setResult } = useTriage();
+  const { t, i18n } = useTranslation();
   
   const [activeTab, setActiveTab] = useState("intake");
   const [simActive, setSimActive] = useState(false);
@@ -81,12 +85,13 @@ export default function Dashboard() {
 
       if (!isJustIdSwap) {
         // ACTUAL DISCHARGE EVENT
-        const departmentName = patient.department?.replace(/_/g, " ") || "General Medicine";
+        const deptKey = patient.department || "General_Medicine";
+        const departmentName = t(`departments.${deptKey}`, deptKey.replace(/_/g, " "));
         
         console.log("[Queue] Patient Discharged:", patient.name);
         
-        toast.success(`Patient ${patient.name} Processed`, {
-          description: `successfully got treated & Removed from Queue`,
+        toast.success(`${t('dashboard.processed_toast')}: ${patient.name}`, {
+          description: t('dashboard.processed_desc'),
           duration: 4000,
           icon: <div className="bg-green-500 rounded-full p-1"><Stethoscope size={12} className="text-white" /></div>
         });
@@ -95,7 +100,7 @@ export default function Dashboard() {
 
     // Update ref for next comparison
     prevActivePatients.current = activePatients;
-  }, [activePatients]);
+  }, [activePatients, t]);
 
 
   // ------------------------------------------------------------------
@@ -136,8 +141,8 @@ export default function Dashboard() {
       });
 
       // Entry Toast
-      toast.success(`${isAuto ? '🤖 [SIM]' : '✅'} Patient ${data.name} Triaged`, {
-        description: `Risk: ${triageResult.risk_label} | Assigned to Queue`,
+      toast.success(`${isAuto ? '🤖 [SIM]' : '✅'} ${t('dashboard.triaged_toast')}: ${data.name}`, {
+        description: `${t('risk.risk_index')}: ${triageResult.risk_label} | ${t('dashboard.assigned_queue')}`,
         duration: 3000,
       });
 
@@ -163,7 +168,7 @@ export default function Dashboard() {
         // Removed the setTimeout here. The useEffect above handles the exit toast now.
       }
     }
-  }, [predict, addPatient]);
+  }, [predict, addPatient, t]);
 
   // ------------------------------------------------------------------
   // 3. SIMULATION LOOP
@@ -197,6 +202,10 @@ export default function Dashboard() {
     }
   };
 
+  const changeLanguage = (lng: string) => {
+    i18n.changeLanguage(lng);
+  };
+
   return (
     <div className="flex h-screen flex-col text-foreground font-sans selection:bg-primary/20 p-4 gap-4 overflow-hidden">
       
@@ -207,15 +216,33 @@ export default function Dashboard() {
             <Shield className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight font-serif-display">PARS</h1>
-            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Clinical Command Center</p>
+            <h1 className="text-xl font-bold tracking-tight font-serif-display">{t('app.title')}</h1>
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{t('app.subtitle')}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-muted-foreground" />
+                <Select onValueChange={changeLanguage} defaultValue={i18n.language}>
+                    <SelectTrigger className="w-[100px] h-8 bg-background/50 border-primary/20 text-xs text-foreground">
+                        <SelectValue placeholder="Language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="en">English</SelectItem>
+                        <SelectItem value="hi">हिंदी</SelectItem>
+                        <SelectItem value="ta">தமிழ்</SelectItem>
+                        <SelectItem value="te">తెలుగు</SelectItem>
+                        <SelectItem value="bn">বাংলা</SelectItem>
+                        <SelectItem value="pa">ਪੰਜਾਬੀ</SelectItem>
+                        <SelectItem value="mr">मराठी</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
+
           <div className="hidden md:flex flex-col items-end border-r border-border pr-4">
             <span className="text-sm font-semibold">{user?.email?.split('@')[0]}</span>
-            <span className="text-[10px] text-muted-foreground uppercase">On Duty</span>
+            <span className="text-[10px] text-muted-foreground uppercase">{t('app.on_duty')}</span>
           </div>
           <Button
             variant="outline"
@@ -224,7 +251,7 @@ export default function Dashboard() {
             className="hidden md:flex gap-2 border-primary/20 text-primary hover:bg-primary/10"
           >
             <LayoutDashboard className="h-4 w-4" />
-            Admin
+            {t('app.admin')}
           </Button>
           <Button variant="ghost" size="icon" onClick={signOut} className="text-muted-foreground hover:text-destructive transition-colors">
             <LogOut className="h-5 w-5" />
@@ -240,7 +267,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between px-5 py-4 border-b border-border bg-card/40">
             <div className="flex items-center gap-2">
               <LayoutDashboard className="h-4 w-4 text-muted-foreground" />
-              <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Patient Record</h2>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">{t('dashboard.patient_record')}</h2>
               <Badge variant="outline" className="ml-1 border-white/10 text-muted-foreground px-2 py-[2px] bg-black/20">
                 {activePatients.length}
               </Badge>
@@ -249,7 +276,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2 rounded-lg border border-white/10 bg-black/20 px-3 py-1.5">
                 <Label htmlFor="sim-mode" className="text-[10px] font-bold uppercase text-muted-foreground cursor-pointer hidden sm:block">
-                  Live Sim
+                  {t('dashboard.live_sim')}
                 </Label>
                 <Switch
                   id="sim-mode"
@@ -285,10 +312,10 @@ export default function Dashboard() {
             <div className="pb-4 shrink-0">
               <TabsList className="grid w-full max-w-[400px] grid-cols-2 bg-card/30 border border-[#D4AF37]/50 backdrop-blur-md rounded-xl p-1">
                 <TabsTrigger value="intake" className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all">
-                 Triage Intake
+                 {t('dashboard.triage_intake')}
                 </TabsTrigger>
                 <TabsTrigger value="analysis" disabled={!result} className="rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all">
-                  Patient Analysis
+                  {t('dashboard.patient_analysis')}
                 </TabsTrigger>
               </TabsList>
             </div>

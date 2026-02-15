@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Patient } from "@/hooks/usePatients";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client"; // Import Supabase
 import {
     BarChart,
@@ -37,6 +38,7 @@ interface Assignment {
 }
 
 export default function AdminStats({ patients, onClose }: AdminStatsProps) {
+    const { t } = useTranslation();
     const [assignments, setAssignments] = useState<Assignment[]>([]);
 
     useEffect(() => {
@@ -174,7 +176,7 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
 
         // Format Dept Data
         // Map keys to nicer display names if needed
-        const formatDeptName = (name: string) => name.replace(/_/g, " ");
+        const formatDeptName = (name: string) => t(`departments.${name}`);
 
         const deptData = ALL_DEPARTMENTS.map(name => ({
             name: formatDeptName(name), // Display name
@@ -183,14 +185,14 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
 
         // Format Risk Data for Pie
         const riskData = [
-            { name: "High Risk", value: riskCounts.HIGH, color: "#ef4444" },
-            { name: "Medium Risk", value: riskCounts.MEDIUM, color: "#f59e0b" },
-            { name: "Low Risk", value: riskCounts.LOW, color: "#22c55e" },
+            { name: t('admin.high_risk'), value: riskCounts.HIGH, color: "#ef4444" },
+            { name: t('admin.medium_risk'), value: riskCounts.MEDIUM, color: "#f59e0b" },
+            { name: t('admin.low_risk'), value: riskCounts.LOW, color: "#22c55e" },
         ].filter(d => d.value > 0);
 
         // Format Vitals Data
         const vitalsData = Object.entries(vitalsAccumulator).map(([risk, data]) => ({
-            name: risk,
+            name: risk === 'HIGH' ? t('admin.high_risk') : risk === 'MEDIUM' ? t('admin.medium_risk') : t('admin.low_risk'),
             "Heart Rate": data.count ? Math.round(data.hr / data.count) : 0,
             "Systolic BP": data.count ? Math.round(data.bp / data.count) : 0,
             "O2 Saturation": data.count ? Math.round(data.o2 / data.count) : 0,
@@ -208,11 +210,12 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
         // GCS: (val / 15) * 10
         // Resp: (val / 20) * 10
 
+
         const clinicalData = [
-            { subject: 'Pain Score', A: parseFloat(avgPain.toFixed(1)), fullMark: 10 },
-            { subject: 'GCS (Scored)', A: parseFloat(((avgGCS / 15) * 10).toFixed(1)), fullMark: 10 },
-            { subject: 'Risk Score', A: parseFloat(((patients.reduce((sum, p) => sum + (p.risk_score || 0), 0) / totalPs) * 10).toFixed(1)), fullMark: 10 },
-            { subject: 'Acuity', A: parseFloat(((riskCounts.HIGH / totalPs) * 10).toFixed(1)), fullMark: 10 }, // Relative high risk density
+            { subject: t('admin.clinical_metrics.pain'), A: parseFloat(avgPain.toFixed(1)), fullMark: 10 },
+            { subject: t('admin.clinical_metrics.gcs'), A: parseFloat(((avgGCS / 15) * 10).toFixed(1)), fullMark: 10 },
+            { subject: t('admin.clinical_metrics.risk'), A: parseFloat(((patients.reduce((sum, p) => sum + (p.risk_score || 0), 0) / totalPs) * 10).toFixed(1)), fullMark: 10 },
+            { subject: t('admin.clinical_metrics.acuity'), A: parseFloat(((riskCounts.HIGH / totalPs) * 10).toFixed(1)), fullMark: 10 }, // Relative high risk density
         ];
 
         return {
@@ -252,12 +255,12 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                     {/* Show Patient Names */}
                     {names.length > 0 && (
                         <div className="mt-2 pt-2 border-t border-border/50">
-                            <p className="text-[10px] text-muted-foreground uppercase mb-1">Assigned Patients:</p>
+                            <p className="text-[10px] text-muted-foreground uppercase mb-1">{t('admin.assigned_patients')}</p>
                             <ul className="list-disc pl-3 text-foreground/80">
                                 {names.slice(0, 5).map((name: string, i: number) => (
                                     <li key={i}>{name}</li>
                                 ))}
-                                {names.length > 5 && <li>+ {names.length - 5} more</li>}
+                                {names.length > 5 && <li>+ {names.length - 5} {t('admin.more')}</li>}
                             </ul>
                         </div>
                     )}
@@ -278,8 +281,8 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M3 3v18h18" /><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" /></svg>
                         </div>
                         <div>
-                            <h2 className="text-2xl font-bold tracking-tight">Analytics Dashboard</h2>
-                            <p className="text-muted-foreground text-sm">Real-time hospital capacity & patient diagnostics</p>
+                            <h2 className="text-2xl font-bold tracking-tight">{t('admin.title')}</h2>
+                            <p className="text-muted-foreground text-sm">{t('admin.subtitle')}</p>
                         </div>
                     </div>
                     <button
@@ -296,10 +299,10 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                     {/* KPI Row */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         {[
-                            { title: "Total Patients", value: kpi.total, color: "text-primary" },
-                            { title: "Critical Cases", value: kpi.high, color: "text-red-500" },
-                            { title: "Active Depts", value: kpi.departments, color: "text-blue-500" },
-                            { title: "Avg Wait Time", value: kpi.avgWait, color: "text-emerald-500" },
+                            { title: t('admin.total_patients'), value: kpi.total, color: "text-primary" },
+                            { title: t('admin.critical_cases'), value: kpi.high, color: "text-red-500" },
+                            { title: t('admin.active_depts'), value: kpi.departments, color: "text-blue-500" },
+                            { title: t('admin.avg_wait'), value: kpi.avgWait, color: "text-emerald-500" },
                         ].map((stat, i) => (
                             <Card key={i} className="bg-card/50 border-white/5">
                                 <CardContent className="p-6 flex flex-col items-center justify-center text-center">
@@ -316,8 +319,8 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                         {/* Department Volume */}
                         <Card className="col-span-1 lg:col-span-2 border-white/5 bg-card/30">
                             <CardHeader>
-                                <CardTitle>Patient Volume by Department</CardTitle>
-                                <CardDescription>Current load distribution across specialties</CardDescription>
+                                <CardTitle>{t('admin.vol_by_dept')}</CardTitle>
+                                <CardDescription>{t('admin.vol_desc')}</CardDescription>
                             </CardHeader>
                             <CardContent className="h-[600px]">
                                 <ResponsiveContainer width="100%" height="100%">
@@ -330,9 +333,9 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                                         <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
                                         <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff05' }} />
                                         <Legend verticalAlign="top" />
-                                        <Bar dataKey="low" name="Low Risk" stackId="a" fill="#22c55e" radius={[0, 0, 4, 4]} />
-                                        <Bar dataKey="medium" name="Medium Risk" stackId="a" fill="#f59e0b" />
-                                        <Bar dataKey="high" name="High Risk" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                                        <Bar dataKey="low" name={t('admin.low_risk')} stackId="a" fill="#22c55e" radius={[0, 0, 4, 4]} />
+                                        <Bar dataKey="medium" name={t('admin.medium_risk')} stackId="a" fill="#f59e0b" />
+                                        <Bar dataKey="high" name={t('admin.high_risk')} stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </CardContent>
@@ -342,8 +345,8 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                         <div className="col-span-1 flex flex-col gap-6">
                             <Card className="border-white/5 bg-card/30 flex-1">
                                 <CardHeader>
-                                    <CardTitle>Acuity Split</CardTitle>
-                                    <CardDescription>Overall risk breakdown</CardDescription>
+                                    <CardTitle>{t('admin.acuity_split')}</CardTitle>
+                                    <CardDescription>{t('admin.risk_breakdown')}</CardDescription>
                                 </CardHeader>
                                 <CardContent className="h-[250px] relative">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -368,7 +371,7 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none pb-8">
                                         <div className="text-center">
                                             <span className="text-3xl font-bold text-foreground">{kpi.total}</span>
-                                            <p className="text-xs text-muted-foreground uppercase">Patients</p>
+                                            <p className="text-xs text-muted-foreground uppercase">{t('admin.patients')}</p>
                                         </div>
                                     </div>
                                 </CardContent>
@@ -377,8 +380,8 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                             {/* Clinical Metrics Radar */}
                             <Card className="border-white/5 bg-card/30 flex-1">
                                 <CardHeader>
-                                    <CardTitle>Clinical Averages</CardTitle>
-                                    <CardDescription>Mean assessment scores</CardDescription>
+                                    <CardTitle>{t('admin.clinical_avg_title')}</CardTitle>
+                                    <CardDescription>{t('admin.clinical_avg_desc')}</CardDescription>
                                 </CardHeader>
                                 <CardContent className="h-[250px]">
                                     <ResponsiveContainer width="100%" height="100%">
@@ -407,8 +410,8 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                         {/* Average Vitals by Risk */}
                         <Card className="border-white/5 bg-card/30">
                             <CardHeader>
-                                <CardTitle>Vitals Correlation Analysis</CardTitle>
-                                <CardDescription>Average vital signs grouped by risk level</CardDescription>
+                                <CardTitle>{t('admin.vitals_analysis')}</CardTitle>
+                                <CardDescription>{t('admin.vitals_desc')}</CardDescription>
                             </CardHeader>
                             <CardContent className="h-[250px]">
                                 <ResponsiveContainer width="100%" height="100%">
@@ -418,9 +421,9 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                                         <YAxis dataKey="name" type="category" stroke="#888888" fontSize={12} width={60} />
                                         <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff05' }} />
                                         <Legend />
-                                        <Bar dataKey="Heart Rate" fill="#8884d8" radius={[0, 4, 4, 0]} barSize={10} />
-                                        <Bar dataKey="Systolic BP" fill="#82ca9d" radius={[0, 4, 4, 0]} barSize={10} />
-                                        <Bar dataKey="O2 Saturation" fill="#ffc658" radius={[0, 4, 4, 0]} barSize={10} />
+                                        <Bar dataKey="Heart Rate" name={t('triage.hr')} fill="#8884d8" radius={[0, 4, 4, 0]} barSize={10} />
+                                        <Bar dataKey="Systolic BP" name={t('triage.bp_sys')} fill="#82ca9d" radius={[0, 4, 4, 0]} barSize={10} />
+                                        <Bar dataKey="O2 Saturation" name={t('triage.spo2')} fill="#ffc658" radius={[0, 4, 4, 0]} barSize={10} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </CardContent>
@@ -429,8 +432,8 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                         {/* Demographics */}
                         <Card className="border-white/5 bg-card/30">
                             <CardHeader>
-                                <CardTitle>Demographics</CardTitle>
-                                <CardDescription>Patient age distribution</CardDescription>
+                                <CardTitle>{t('admin.demographics')}</CardTitle>
+                                <CardDescription>{t('admin.age_dist')}</CardDescription>
                             </CardHeader>
                             <CardContent className="h-[250px]">
                                 <ResponsiveContainer width="100%" height="100%">
