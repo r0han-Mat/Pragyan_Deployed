@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Patient } from "@/hooks/usePatients";
+import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client"; // Import Supabase
 import {
     BarChart,
@@ -15,10 +16,14 @@ import {
     Cell,
     AreaChart,
     Area,
+    Radar,
+    RadarChart,
+    PolarGrid,
+    PolarAngleAxis,
+    PolarRadiusAxis,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useTranslation } from "react-i18next";
 
 interface AdminStatsProps {
     patients: Patient[];
@@ -38,18 +43,18 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
 
     useEffect(() => {
         const fetchAssignments = async () => {
-             // @ts-ignore
+            // @ts-ignore
             const { data, error } = await supabase
                 .from('patient_assignments')
                 .select('*');
-            
+
             if (!error && data) {
                 setAssignments(data as unknown as Assignment[]);
             }
         };
 
         fetchAssignments();
-        
+
         // Optional: Subscribe to realtime, but simple fetch is fine for now
         const channel = supabase
             .channel('public:patient_assignments')
@@ -59,26 +64,27 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
             .subscribe();
 
         return () => {
-             supabase.removeChannel(channel);
+            supabase.removeChannel(channel);
         }
     }, []);
 
     // 1. Process Data
-    const { 
-        deptStats, 
-        riskStats, 
-        arrivalStats, 
-        vitalsStats, 
+    const {
+        deptStats,
+        riskStats,
+        arrivalStats,
+        vitalsStats,
         ageStats,
-        kpi 
+        clinicalStats, // New
+        kpi
     } = useMemo(() => {
         // AI-GEN: Define all departments to ensure they appear in the chart even if count is 0
         const ALL_DEPARTMENTS = [
-            "Cardiology", "Neurology", "Gastroenterology", "Pulmonology", 
-            "Orthopedics", "Emergency_Trauma", "General_Medicine", "Dermatology", 
+            "Cardiology", "Neurology", "Gastroenterology", "Pulmonology",
+            "Orthopedics", "Emergency_Trauma", "General_Medicine", "Dermatology",
             "ENT", "Urology_Nephrology", "Psychiatry", "Toxicology"
         ];
-        
+
         // Initialize map with 0s for all departments
         // Added 'names' array to store patient details
         const deptMap: Record<string, { total: number; high: number; medium: number; low: number; names: string[] }> = {};
@@ -93,10 +99,10 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
             LOW: { hr: 0, bp: 0, o2: 0, count: 0 },
         };
         const ageBuckets = { "0-18": 0, "19-35": 0, "36-50": 0, "51-65": 0, "65+": 0 };
-        
+
         // Sort patients by time for arrival trend
         const sortedPatients = [...patients].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        
+
         // Arrival Trend
         const arrivalTrend = sortedPatients.map((_, i) => ({
             time: i + 1,
@@ -109,10 +115,10 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
             let dept = a.department || "General_Medicine";
             // Normalize dept name: Replace spaces with underscores and match case-insensitive
             let normalizedDept = dept.replace(/ /g, "_");
-            
+
             // Find matching key in existing map (case-insensitive)
             const matchKey = Object.keys(deptMap).find(k => k.toLowerCase() === normalizedDept.toLowerCase());
-            
+
             if (matchKey) {
                 dept = matchKey;
             } else {
@@ -130,14 +136,14 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
             // unless we join with `patients` prop by name or ID.
             // Let's try to match with `patients` prop to get risk.
             // Assignments has patient_id, use that for reliable matching
-            const patient = patients.find(p => p.id === (a as any).patient_id); 
+            const patient = patients.find(p => p.id === (a as any).patient_id);
 
             // Fallback to name match if ID match fails (though ID should exist)
             const pNameMatch = !patient ? patients.find(p => p.name === a.patient_name) : null;
             const finalPatient = patient || pNameMatch;
 
             const risk = finalPatient?.risk_label || "LOW";
-             if (risk === "HIGH") deptMap[dept].high++;
+            if (risk === "HIGH") deptMap[dept].high++;
             else if (risk === "MEDIUM") deptMap[dept].medium++;
             else deptMap[dept].low++;
         });
@@ -170,7 +176,7 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
 
         // Format Dept Data
         // Map keys to nicer display names if needed
-        const formatDeptName = (name: string) => t(`departments.${name}`, name.replace(/_/g, " "));
+        const formatDeptName = (name: string) => t(`departments.${name}`);
 
         const deptData = ALL_DEPARTMENTS.map(name => ({
             name: formatDeptName(name), // Display name
@@ -179,14 +185,14 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
 
         // Format Risk Data for Pie
         const riskData = [
-            { name: "High Risk", value: riskCounts.HIGH, color: "#ef4444" },
-            { name: "Medium Risk", value: riskCounts.MEDIUM, color: "#f59e0b" },
-            { name: "Low Risk", value: riskCounts.LOW, color: "#22c55e" },
+            { name: t('admin.high_risk'), value: riskCounts.HIGH, color: "#ef4444" },
+            { name: t('admin.medium_risk'), value: riskCounts.MEDIUM, color: "#f59e0b" },
+            { name: t('admin.low_risk'), value: riskCounts.LOW, color: "#22c55e" },
         ].filter(d => d.value > 0);
 
         // Format Vitals Data
         const vitalsData = Object.entries(vitalsAccumulator).map(([risk, data]) => ({
-            name: risk,
+            name: risk === 'HIGH' ? t('admin.high_risk') : risk === 'MEDIUM' ? t('admin.medium_risk') : t('admin.low_risk'),
             "Heart Rate": data.count ? Math.round(data.hr / data.count) : 0,
             "Systolic BP": data.count ? Math.round(data.bp / data.count) : 0,
             "O2 Saturation": data.count ? Math.round(data.o2 / data.count) : 0,
@@ -195,12 +201,30 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
         // Format Age Data
         const ageData = Object.entries(ageBuckets).map(([name, count]) => ({ name, count }));
 
+        // Calculate Average Clinical Metrics (Radar Data)
+        const totalPs = patients.length || 1;
+        const avgPain = patients.reduce((sum, p) => sum + (p.pain_score || 0), 0) / totalPs;
+        const avgGCS = patients.reduce((sum, p) => sum + (p.gcs_score || 0), 0) / totalPs;
+        // Normalize Resp Rate (typical 12-20) to 0-10 scale for radar? Or just show raw.
+        // Let's scale fit to ~10 range for visual consistency. Pain 0-10, GCS 3-15.
+        // GCS: (val / 15) * 10
+        // Resp: (val / 20) * 10
+
+
+        const clinicalData = [
+            { subject: t('admin.clinical_metrics.pain'), A: parseFloat(avgPain.toFixed(1)), fullMark: 10 },
+            { subject: t('admin.clinical_metrics.gcs'), A: parseFloat(((avgGCS / 15) * 10).toFixed(1)), fullMark: 10 },
+            { subject: t('admin.clinical_metrics.risk'), A: parseFloat(((patients.reduce((sum, p) => sum + (p.risk_score || 0), 0) / totalPs) * 10).toFixed(1)), fullMark: 10 },
+            { subject: t('admin.clinical_metrics.acuity'), A: parseFloat(((riskCounts.HIGH / totalPs) * 10).toFixed(1)), fullMark: 10 }, // Relative high risk density
+        ];
+
         return {
             deptStats: deptData,
             riskStats: riskData,
             arrivalStats: arrivalTrend,
             vitalsStats: vitalsData,
             ageStats: ageData,
+            clinicalStats: clinicalData,
             kpi: {
                 total: patients.length,
                 high: riskCounts.HIGH,
@@ -208,7 +232,7 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                 departments: Object.keys(deptMap).filter(k => deptMap[k].total > 0).length // Active departments
             }
         };
-    }, [patients, assignments, t]);
+    }, [patients, assignments]);
 
     // Custom Tooltip
     const CustomTooltip = ({ active, payload, label }: any) => {
@@ -227,7 +251,7 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                             <span>{entry.name}: {entry.value}</span>
                         </div>
                     ))}
-                    
+
                     {/* Show Patient Names */}
                     {names.length > 0 && (
                         <div className="mt-2 pt-2 border-t border-border/50">
@@ -254,7 +278,7 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                 <div className="flex items-center justify-between px-6 py-4 border-b border-[#D4AF37]/30 bg-card/50">
                     <div className="flex items-center gap-3">
                         <div className="p-2 bg-primary/10 rounded-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M3 3v18h18" /><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" /></svg>
                         </div>
                         <div>
                             <h2 className="text-2xl font-bold tracking-tight">{t('admin.title')}</h2>
@@ -265,7 +289,7 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                         onClick={onClose}
                         className="rounded-full p-2 hover:bg-destructive/10 hover:text-destructive transition-colors"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>
                     </button>
                 </div>
 
@@ -290,73 +314,103 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                     </div>
 
                     {/* Charts Row 1: Volume & Trends */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[350px]">
-                        
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
                         {/* Department Volume */}
                         <Card className="col-span-1 lg:col-span-2 border-white/5 bg-card/30">
                             <CardHeader>
-                                <CardTitle>{t('admin.volume_title')}</CardTitle>
-                                <CardDescription>{t('admin.volume_desc')}</CardDescription>
+                                <CardTitle>{t('admin.vol_by_dept')}</CardTitle>
+                                <CardDescription>{t('admin.vol_desc')}</CardDescription>
                             </CardHeader>
-                            <CardContent className="h-[250px]">
+                            <CardContent className="h-[600px]">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={deptStats} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                                    <BarChart
+                                        data={deptStats}
+                                        margin={{ top: 10, right: 30, left: 0, bottom: 40 }} // Added bottom margin for labels
+                                    >
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                                        <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                                        <XAxis dataKey="name" stroke="#888888" fontSize={10} tickLine={false} axisLine={false} interval={0} angle={-45} textAnchor="end" height={60} />
                                         <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
                                         <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff05' }} />
-                                        <Legend />
-                                        <Bar dataKey="low" name="Low Risk" stackId="a" fill="#22c55e" radius={[0, 0, 4, 4]} />
-                                        <Bar dataKey="medium" name="Medium Risk" stackId="a" fill="#f59e0b" />
-                                        <Bar dataKey="high" name="High Risk" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                                        <Legend verticalAlign="top" />
+                                        <Bar dataKey="low" name={t('admin.low_risk')} stackId="a" fill="#22c55e" radius={[0, 0, 4, 4]} />
+                                        <Bar dataKey="medium" name={t('admin.medium_risk')} stackId="a" fill="#f59e0b" />
+                                        <Bar dataKey="high" name={t('admin.high_risk')} stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </CardContent>
                         </Card>
 
                         {/* Risk Distribution Pie */}
-                        <Card className="col-span-1 border-white/5 bg-card/30">
-                            <CardHeader>
-                                <CardTitle>{t('admin.acuity_title')}</CardTitle>
-                                <CardDescription>{t('admin.acuity_desc')}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="h-[250px] relative">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={riskStats}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={80}
-                                            paddingAngle={5}
-                                            dataKey="value"
-                                        >
-                                            {riskStats.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip content={<CustomTooltip />} />
-                                        <Legend verticalAlign="bottom" height={36}/>
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none pb-8">
-                                    <div className="text-center">
-                                        <span className="text-3xl font-bold text-foreground">{kpi.total}</span>
-                                        <p className="text-xs text-muted-foreground uppercase">{t('admin.patients')}</p>
+                        <div className="col-span-1 flex flex-col gap-6">
+                            <Card className="border-white/5 bg-card/30 flex-1">
+                                <CardHeader>
+                                    <CardTitle>{t('admin.acuity_split')}</CardTitle>
+                                    <CardDescription>{t('admin.risk_breakdown')}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="h-[250px] relative">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={riskStats}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={60}
+                                                outerRadius={80}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                            >
+                                                {riskStats.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip content={<CustomTooltip />} />
+                                            <Legend verticalAlign="bottom" height={36} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none pb-8">
+                                        <div className="text-center">
+                                            <span className="text-3xl font-bold text-foreground">{kpi.total}</span>
+                                            <p className="text-xs text-muted-foreground uppercase">{t('admin.patients')}</p>
+                                        </div>
                                     </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                </CardContent>
+                            </Card>
+
+                            {/* Clinical Metrics Radar */}
+                            <Card className="border-white/5 bg-card/30 flex-1">
+                                <CardHeader>
+                                    <CardTitle>{t('admin.clinical_avg_title')}</CardTitle>
+                                    <CardDescription>{t('admin.clinical_avg_desc')}</CardDescription>
+                                </CardHeader>
+                                <CardContent className="h-[250px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RadarChart cx="50%" cy="50%" outerRadius="80%" data={clinicalStats}>
+                                            <PolarGrid stroke="#ffffff20" />
+                                            <PolarAngleAxis dataKey="subject" tick={{ fill: '#888888', fontSize: 10 }} />
+                                            <PolarRadiusAxis angle={30} domain={[0, 10]} tick={false} axisLine={false} />
+                                            <Radar
+                                                name="Population Avg"
+                                                dataKey="A"
+                                                stroke="#8884d8"
+                                                fill="#8884d8"
+                                                fillOpacity={0.6}
+                                            />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#8884d8', strokeWidth: 2 }} />
+                                        </RadarChart>
+                                    </ResponsiveContainer>
+                                </CardContent>
+                            </Card>
+                        </div>
                     </div>
 
                     {/* Charts Row 2: Vitals & Demographics */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[350px]">
-                        
+
                         {/* Average Vitals by Risk */}
                         <Card className="border-white/5 bg-card/30">
                             <CardHeader>
-                                <CardTitle>{t('admin.vitals_title')}</CardTitle>
+                                <CardTitle>{t('admin.vitals_analysis')}</CardTitle>
                                 <CardDescription>{t('admin.vitals_desc')}</CardDescription>
                             </CardHeader>
                             <CardContent className="h-[250px]">
@@ -367,9 +421,9 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                                         <YAxis dataKey="name" type="category" stroke="#888888" fontSize={12} width={60} />
                                         <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff05' }} />
                                         <Legend />
-                                        <Bar dataKey="Heart Rate" fill="#8884d8" radius={[0, 4, 4, 0]} barSize={10}/>
-                                        <Bar dataKey="Systolic BP" fill="#82ca9d" radius={[0, 4, 4, 0]} barSize={10}/>
-                                        <Bar dataKey="O2 Saturation" fill="#ffc658" radius={[0, 4, 4, 0]} barSize={10}/>
+                                        <Bar dataKey="Heart Rate" name={t('triage.hr')} fill="#8884d8" radius={[0, 4, 4, 0]} barSize={10} />
+                                        <Bar dataKey="Systolic BP" name={t('triage.bp_sys')} fill="#82ca9d" radius={[0, 4, 4, 0]} barSize={10} />
+                                        <Bar dataKey="O2 Saturation" name={t('triage.spo2')} fill="#ffc658" radius={[0, 4, 4, 0]} barSize={10} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </CardContent>
@@ -378,16 +432,16 @@ export default function AdminStats({ patients, onClose }: AdminStatsProps) {
                         {/* Demographics */}
                         <Card className="border-white/5 bg-card/30">
                             <CardHeader>
-                                <CardTitle>{t('admin.demographics_title')}</CardTitle>
-                                <CardDescription>{t('admin.demographics_desc')}</CardDescription>
+                                <CardTitle>{t('admin.demographics')}</CardTitle>
+                                <CardDescription>{t('admin.age_dist')}</CardDescription>
                             </CardHeader>
                             <CardContent className="h-[250px]">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={ageStats} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                                         <defs>
                                             <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8} />
+                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
                                         <XAxis dataKey="name" stroke="#888888" fontSize={12} />

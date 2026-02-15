@@ -117,10 +117,19 @@
         "vitals_desc": "ঝুঁকি স্তর দ্বারা গ্রুপ করা গড় ভাইটালস",
         "demographics": "জনসংখ্যা",
         "age_dist": "রোগীর বয়স বিতরণ",
+        "patients": "রোগী",
         "assigned_patients": "বরাদ্দকৃত রোগী:",
         "low_risk": "কম ঝুঁকি",
         "medium_risk": "মাঝারি ঝুঁকি",
-        "high_risk": "উচ্চ ঝুঁকি"
+        "high_risk": "উচ্চ ঝুঁকি",
+        "clinical_metrics": {
+            "pain": "ব্যথা স্কোর",
+            "gcs": "GCS (Scored)",
+            "risk": "Risk Score",
+            "acuity": "Acuity"
+        },
+        "clinical_avg_title": "ক্লিনিক্যাল গড়",
+        "clinical_avg_desc": "গড় মূল্যায়ন স্কোর"
     },
     "login": {
         "operation": "অপারেশন",

@@ -117,10 +117,19 @@
         "vitals_desc": "जोखिम स्तर द्वारा समूहीकृत औसत महत्वपूर्ण संकेत",
         "demographics": "जनसांख्यिकी",
         "age_dist": "मरीज की आयु वितरण",
+        "patients": "मरीज",
         "assigned_patients": "सौंपे गए मरीज:",
         "low_risk": "कम जोखिम",
         "medium_risk": "मध्यम जोखिम",
-        "high_risk": "उच्य जोखिम"
+        "high_risk": "उच्य जोखिम",
+        "clinical_metrics": {
+            "pain": "दर्द स्कोर",
+            "gcs": "GCS (Scored)",
+            "risk": "जोखिम स्कोर",
+            "acuity": "तीव्रता"
+        },
+        "clinical_avg_title": "नैदानिक औसत",
+        "clinical_avg_desc": "औसत मूल्यांकन स्कोर"
     },
     "login": {
         "operation": "ऑपरेशन",

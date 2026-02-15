@@ -117,10 +117,19 @@
         "vitals_desc": "जोखीम स्तरावर गटबद्ध सरासरी महत्त्वपूर्ण चिन्हे",
         "demographics": "लोकसंख्याशास्त्र",
         "age_dist": "रुग्ण वय वितरण",
+        "patients": "रुग्ण",
         "assigned_patients": "नियुक्त रुग्ण:",
         "low_risk": "कमी जोखीम",
         "medium_risk": "मध्यम जोखीम",
-        "high_risk": "उच्च जोखीम"
+        "high_risk": "उच्च जोखीम",
+        "clinical_metrics": {
+            "pain": "वेदना स्कोर",
+            "gcs": "GCS (Scored)",
+            "risk": "जोखीम स्कोर",
+            "acuity": "तीव्रता"
+        },
+        "clinical_avg_title": "क्लिनिकल सरासरी",
+        "clinical_avg_desc": "सरासरी मूल्यांकन गुण"
     },
     "login": {
         "operation": "ऑपरेशन",

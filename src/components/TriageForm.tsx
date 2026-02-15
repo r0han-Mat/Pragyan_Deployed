@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import axios from "axios";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea"; 
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Stethoscope, Loader2, Upload, FileText, Mic, MicOff } from "lucide-react"; 
+import { Stethoscope, Loader2, Upload, FileText, Mic, MicOff } from "lucide-react";
 import { PatientInput } from "@/hooks/useTriage";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { parseVoiceInput } from "@/utils/voiceParser";
-import { useTranslation } from "react-i18next";
 
 interface Props {
   onSubmit: (data: PatientInput & { name: string }) => void;
@@ -21,7 +21,7 @@ interface Props {
 // Initial state set to undefined/empty so placeholders are visible
 const INITIAL: Partial<PatientInput> & { name: string } = {
   name: "",
-  Age: undefined, 
+  Age: undefined,
   Gender: "",
   Heart_Rate: undefined,
   Systolic_BP: undefined,
@@ -48,22 +48,22 @@ export default function TriageForm({ onSubmit, loading }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Fill defaults for submission if fields are still empty
     const safeForm = {
-        ...form,
-        name: form.name || "Unknown Patient",
-        Age: form.Age || 30,
-        Gender: form.Gender || "Male",
-        Heart_Rate: form.Heart_Rate || 80,
-        Systolic_BP: form.Systolic_BP || 120,
-        Diastolic_BP: form.Diastolic_BP || 80,
-        O2_Saturation: form.O2_Saturation || 98,
-        Temperature: form.Temperature || 37,
-        Respiratory_Rate: form.Respiratory_Rate || 16,
-        Pain_Score: form.Pain_Score || 0,
-        GCS_Score: form.GCS_Score || 15,
-        Arrival_Mode: form.Arrival_Mode || "Walk-in",
+      ...form,
+      name: form.name || "Unknown Patient",
+      Age: form.Age || 30,
+      Gender: form.Gender || "Male",
+      Heart_Rate: form.Heart_Rate || 80,
+      Systolic_BP: form.Systolic_BP || 120,
+      Diastolic_BP: form.Diastolic_BP || 80,
+      O2_Saturation: form.O2_Saturation || 98,
+      Temperature: form.Temperature || 37,
+      Respiratory_Rate: form.Respiratory_Rate || 16,
+      Pain_Score: form.Pain_Score || 0,
+      GCS_Score: form.GCS_Score || 15,
+      Arrival_Mode: form.Arrival_Mode || "Walk-in",
     } as PatientInput & { name: string };
 
     onSubmit(safeForm);
@@ -92,9 +92,6 @@ export default function TriageForm({ onSubmit, loading }: Props) {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Reset input value to allow selecting the same file again if needed
-    event.target.value = "";
-
     setIsUploading(true);
     const formData = new FormData();
     formData.append("file", file);
@@ -116,7 +113,7 @@ export default function TriageForm({ onSubmit, loading }: Props) {
         ...mappedData,
       }));
 
-      alert(`✅ Scanned successfully!`);
+      alert(t('common.success') + "!");
     } catch (error) {
       console.error("Upload failed", error);
       alert("❌ Failed to parse document.");
@@ -128,7 +125,7 @@ export default function TriageForm({ onSubmit, loading }: Props) {
   return (
     <div className="flex h-full flex-col">
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-4">
-        
+
         {/* --- Auto-Fill Upload Box --- */}
         <div className="mb-2 rounded-lg border-2 border-dashed border-border bg-secondary/30 p-3 transition-colors hover:bg-secondary/50">
           <div className="flex items-center justify-between">
@@ -142,20 +139,13 @@ export default function TriageForm({ onSubmit, loading }: Props) {
               </div>
             </div>
 
-            <input 
-              type="file" 
-              id="triage-upload" 
-              accept=".pdf" 
-              className="hidden" 
-              onChange={handleFileUpload} 
-            />
-            <label htmlFor="triage-upload" className="cursor-pointer">
+            <label className="cursor-pointer">
+              <input type="file" accept=".pdf" className="hidden" onChange={handleFileUpload} />
               <div
-                className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
-                  isUploading
+                className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${isUploading
                     ? "cursor-wait bg-muted text-muted-foreground"
                     : "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
-                }`}
+                  }`}
               >
                 {isUploading ? (
                   <>
@@ -172,7 +162,7 @@ export default function TriageForm({ onSubmit, loading }: Props) {
             </label>
           </div>
         </div>
-        
+
         {/* Name */}
         <div className="space-y-1">
           <Label className="text-xs text-white">{t('triage.patient_name')}</Label>
@@ -187,26 +177,25 @@ export default function TriageForm({ onSubmit, loading }: Props) {
         {/* Chief Complaint WITH VOICE */}
         <div className="space-y-1 relative">
           <div className="flex justify-between items-center">
-             <Label className="text-xs text-white">{t('triage.chief_complaint')}</Label>
-             {hasSupport && (
-               <button  
-                 type="button"
-                 onClick={toggleListening}
-                 className={`flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full transition-all ${
-                   isListening ? "bg-red-500 text-white animate-pulse" : "bg-primary/10 text-primary hover:bg-primary/20"
-                 }`}
-               >
-                 {isListening ? <Mic className="h-3 w-3" /> : <MicOff className="h-3 w-3" />}
-                 {isListening ? t('triage.listening') : t('triage.voice_input')}
-               </button>
-             )}
+            <Label className="text-xs text-white">{t('triage.chief_complaint')}</Label>
+            {hasSupport && (
+              <button
+                type="button"
+                onClick={toggleListening}
+                className={`flex items-center gap-1 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full transition-all ${isListening ? "bg-red-500 text-white animate-pulse" : "bg-primary/10 text-primary hover:bg-primary/20"
+                  }`}
+              >
+                {isListening ? <Mic className="h-3 w-3" /> : <MicOff className="h-3 w-3" />}
+                {isListening ? t('triage.listening') : t('triage.voice_input')}
+              </button>
+            )}
           </div>
           <div className={`relative transition-all ${isListening ? "ring-2 ring-primary/50 rounded-md" : ""}`}>
-            <Textarea 
-              value={form.Chief_Complaint || ""} 
-              onChange={(e) => set("Chief_Complaint", e.target.value)} 
+            <Textarea
+              value={form.Chief_Complaint || ""}
+              onChange={(e) => set("Chief_Complaint", e.target.value)}
               placeholder="e.g. Chest pain radiating to left arm, started 2 hours ago..."
-              className="border-2 border-border bg-secondary text-foreground placeholder:text-muted-foreground/40 min-h-[80px]" 
+              className="border-2 border-border bg-secondary text-foreground placeholder:text-muted-foreground/40 min-h-[80px]"
             />
           </div>
         </div>
@@ -243,11 +232,11 @@ export default function TriageForm({ onSubmit, loading }: Props) {
         <p className="text-xs font-semibold uppercase tracking-wider text-primary">{t('triage.vitals')}</p>
         <div className="grid grid-cols-2 gap-3">
           {[
-            ["Heart_Rate", t('triage.hr'), 0, 300, "e.g. 80"],
-            ["Systolic_BP", t('triage.bp_sys'), 0, 300, "e.g. 120"],
-            ["Diastolic_BP", t('triage.bp_dia'), 0, 200, "e.g. 80"],
-            ["O2_Saturation", t('triage.spo2'), 0, 100, "e.g. 98"],
-            ["Temperature", t('triage.temp'), 30, 45, "e.g. 37.0"],
+            ["Heart_Rate", `${t('triage.hr')} (bpm)`, 0, 300, "e.g. 80"],
+            ["Systolic_BP", `${t('triage.bp_sys')} (mmHg)`, 0, 300, "e.g. 120"],
+            ["Diastolic_BP", `${t('triage.bp_dia')} (mmHg)`, 0, 200, "e.g. 80"],
+            ["O2_Saturation", `${t('triage.spo2')} (%)`, 0, 100, "e.g. 98"],
+            ["Temperature", `${t('triage.temp')} (°C)`, 30, 45, "e.g. 37.0"],
             ["Respiratory_Rate", t('triage.rr'), 0, 60, "e.g. 16"],
           ].map(([key, label, min, max, placeholder]) => (
             <div key={key as string} className="space-y-1">
@@ -317,7 +306,7 @@ export default function TriageForm({ onSubmit, loading }: Props) {
                 checked={(form as any)[key]}
                 onCheckedChange={(v) => set(key, !!v)}
               />
-              {key.replace("_", " ")}
+              {t(`triage.${key.toLowerCase()}`)}
             </label>
           ))}
         </div>

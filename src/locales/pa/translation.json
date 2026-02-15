@@ -117,10 +117,19 @@
         "vitals_desc": "ਜੋਖਮ ਪੱਧਰ ਦੁਆਰਾ ਸਮੂਹਬੱਧ ਔਸਤ ਮਹੱਤਵਪੂਰਣ ਸੰਕੇਤ",
         "demographics": "ਜਨਸੰਖਿਆ",
         "age_dist": "ਮਰੀਜ਼ ਦੀ ਉਮਰ ਦੀ ਵੰਡ",
+        "patients": "ਮਰੀਜ਼",
         "assigned_patients": "ਨਿਰਧਾਰਤ ਮਰੀਜ਼:",
         "low_risk": "ਘੱਟ ਜੋਖਮ",
         "medium_risk": "ਦਰਮਿਆਨਾ ਜੋਖਮ",
-        "high_risk": "ਉੱਚ ਜੋਖਮ"
+        "high_risk": "ਉੱਚ ਜੋਖਮ",
+        "clinical_metrics": {
+            "pain": "ਦਰਦ ਦਾ ਸਕੋਰ",
+            "gcs": "GCS (Scored)",
+            "risk": "Risk Score",
+            "acuity": "Acuity"
+        },
+        "clinical_avg_title": "ਕਲੀਨਿਕਲ ਔਸਤ",
+        "clinical_avg_desc": "ਔਸਤ ਮੁਲਾਂਕਣ ਸਕੋਰ"
     },
     "login": {
         "operation": "ਓਪਰੇਸ਼ਨ",

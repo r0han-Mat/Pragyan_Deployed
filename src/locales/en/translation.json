@@ -111,17 +111,25 @@
         "critical_cases": "Critical Cases",
         "active_depts": "Active Depts",
         "avg_wait": "Avg Wait Time",
-        "volume_title": "Patient Volume by Department",
-        "volume_desc": "Current load distribution across specialties",
-        "acuity_title": "Acuity Split",
-        "acuity_desc": "Overall risk breakdown",
-        "vitals_title": "Vitals Correlation Analysis",
+        "vol_by_dept": "Patient Volume by Department",
+        "vol_desc": "Current load distribution across specialties",
+        "acuity_split": "Acuity Split",
+        "risk_breakdown": "Overall risk breakdown",
+        "vitals_analysis": "Vitals Correlation Analysis",
         "vitals_desc": "Average vital signs grouped by risk level",
-        "demographics_title": "Demographics",
-        "demographics_desc": "Patient age distribution",
+        "demographics": "Demographics",
+        "age_dist": "Patient age distribution",
         "assigned_patients": "Assigned Patients:",
         "patients": "Patients",
-        "more": "more"
+        "more": "more",
+        "clinical_metrics": {
+            "pain": "Pain Score",
+            "gcs": "GCS (Scored)",
+            "risk": "Risk Score",
+            "acuity": "Acuity"
+        },
+        "clinical_avg_title": "Clinical Averages",
+        "clinical_avg_desc": "Mean assessment scores"
     },
     "login": {
         "operation": "Operation",

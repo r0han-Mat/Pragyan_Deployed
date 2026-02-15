@@ -54,13 +54,16 @@ export function useTriage() {
       });
       if (!res.ok) throw new Error(`API error: ${res.status}`);
       const triageResult: TriageResult = await res.json();
+      console.log("[useTriage] API Response:", triageResult);
       setResult(triageResult);
       return triageResult;
     } catch (err: any) {
+      console.error("[useTriage] API Call Failed:", err);
       const message = err.message || "Failed to connect to triage API";
       setError(message);
       // Fallback: client-side rule-based scoring
       const fallback = clientSideFallback(data);
+      console.log("[useTriage] Using Fallback:", fallback);
       setResult(fallback);
       return fallback;
     } finally {

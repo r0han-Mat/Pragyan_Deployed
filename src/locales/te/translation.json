@@ -117,10 +117,19 @@
         "vitals_desc": "రిస్క్ స్థాయి ద్వారా సమూహం చేయబడిన సగటు వైటల్స్",
         "demographics": "జనాభా",
         "age_dist": "రోగి వయస్సు పంపిణీ",
+        "patients": "రోగులు",
         "assigned_patients": "కేటాయించిన రోగులు:",
         "low_risk": "తక్కువ రిస్క్",
         "medium_risk": "మధ్యస్థ రిస్క్",
-        "high_risk": "అధిక రిస్క్"
+        "high_risk": "అధిక రిస్క్",
+        "clinical_metrics": {
+            "pain": "నొప్పి స్కోరు",
+            "gcs": "GCS (Scored)",
+            "risk": "రిస్క్ స్కోరు",
+            "acuity": "తీవ్రత"
+        },
+        "clinical_avg_title": "క్లినికల్ సగటులు",
+        "clinical_avg_desc": "సగటు అసెస్‌మెంట్ స్కోర్లు"
     },
     "login": {
         "operation": "ఆపరేషన్",

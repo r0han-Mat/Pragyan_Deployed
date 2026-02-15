@@ -117,10 +117,19 @@
         "vitals_desc": "ஆபத்து மட்டத்தால் தொகுக்கப்பட்ட சராசரி முக்கிய அறிகுறிகள்",
         "demographics": "மக்கள் தொகை",
         "age_dist": "நோயாளி வயது விநியோகம்",
+        "patients": "நோயாளிகள்",
         "assigned_patients": "ஒதுக்கப்பட்ட நோயாளிகள்:",
         "low_risk": "குறைந்த ஆபத்து",
         "medium_risk": "நடுத்தர ஆபத்து",
-        "high_risk": "அதிக ஆபத்து"
+        "high_risk": "அதிக ஆபத்து",
+        "clinical_metrics": {
+            "pain": "வலி மதிப்பெண்",
+            "gcs": "GCS (Scored)",
+            "risk": "ஆபத்து ஸ்கோர்",
+            "acuity": "தீவிரத்தன்மை"
+        },
+        "clinical_avg_title": "மருத்துவ சராசரிகள்",
+        "clinical_avg_desc": "சராசரி மதிப்பீட்டு மதிப்பெண்கள்"
     },
     "login": {
         "operation": "ஆபரேஷன்",
