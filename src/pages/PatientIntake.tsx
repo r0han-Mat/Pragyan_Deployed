@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -155,21 +156,73 @@ export default function PatientIntake() {
                     </p>
                   </div>
 
-                  {/* VOICE INDICATOR */}
-                  {hasSupport && (
-                    <Button 
-                      variant="outline" 
-                      onClick={toggleListening}
-                      className={`gap-2 transition-all duration-500 ${
-                        isListening 
-                          ? "border-red-500 bg-red-500/10 text-red-500 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]" 
-                          : "border-primary/30 hover:bg-primary/5 text-muted-foreground"
-                      }`}
-                    >
-                      {isListening ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-                      {isListening ? "Listening..." : "Voice Input"}
-                    </Button>
-                  )}
+                  <div className="flex gap-2">
+                     {/* OCR UPLOAD */}
+                     <div className="relative">
+                        <input 
+                           type="file" 
+                           id="ehr-upload" 
+                           accept=".pdf" 
+                           className="hidden" 
+                           onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+
+                              const formData = new FormData();
+                              formData.append("file", file);
+
+                              const toastId = toast.loading("Analyzing details...");
+
+                              try {
+                                 const res = await fetch("http://localhost:8000/parse-document", {
+                                    method: "POST",
+                                    body: formData
+                                 });
+                                 const data = await res.json();
+                                 if (data.data) {
+                                    const extracted = data.data;
+                                    
+                                    // Auto-fill form
+                                    setForm(prev => ({
+                                       name: extracted.name || prev.name,
+                                       age: extracted.Age ? extracted.Age.toString() : prev.age,
+                                       gender: extracted.Gender || prev.gender,
+                                       symptoms: extracted.Chief_Complaint || prev.symptoms
+                                    }));
+                                    
+                                    // Store vitals
+                                    setExtractedData(prev => ({ ...prev, ...extracted }));
+                                    toast.success("EHR Parsed Successfully", { id: toastId });
+                                 }
+                              } catch (err) {
+                                 toast.error("Failed to parse document", { id: toastId });
+                              }
+                           }}
+                        />
+                        <Label 
+                           htmlFor="ehr-upload" 
+                           className="flex items-center gap-2 h-9 px-4 rounded-md border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 cursor-pointer transition-all text-sm font-medium"
+                        >
+                           <FileText className="h-4 w-4" /> Upload EHR
+                        </Label>
+                     </div>
+
+                     {/* VOICE INDICATOR */}
+                     {hasSupport && (
+                       <Button 
+                         variant="outline" 
+                         onClick={toggleListening}
+                         className={`gap-2 transition-all duration-500 ${
+                           isListening 
+                             ? "border-red-500 bg-red-500/10 text-red-500 animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]" 
+                             : "border-primary/30 hover:bg-primary/5 text-muted-foreground"
+                         }`}
+                       >
+                         {isListening ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+                         {isListening ? "Listening..." : "Voice Input"}
+                       </Button>
+                     )}
+                  </div>
                 </div>
 
                 {/* Form Body */}

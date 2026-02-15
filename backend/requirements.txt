@@ -9,3 +9,5 @@ numpy==1.26.2
 
 sentence-transformers
 torch
+google-generativeai
+python-dotenv
