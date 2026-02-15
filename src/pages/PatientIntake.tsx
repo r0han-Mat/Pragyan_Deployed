@@ -34,6 +34,7 @@ import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { parseVoiceInput } from "@/utils/voiceParser";
 import VitalsMonitor from "@/components/VitalsMonitor";
 import { supabase } from "@/integrations/supabase/client";
+import { useTranslation } from "react-i18next";
 
 interface SimpleFormState {
   name: string;
@@ -54,6 +55,7 @@ interface HospitalData {
 }
 
 export default function PatientIntake() {
+  const { t } = useTranslation();
   const { predict, loading, result, setResult } = useTriage();
   const [step, setStep] = useState<"form" | "result">("form");
   
@@ -271,13 +273,13 @@ export default function PatientIntake() {
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight font-serif-display">PARS</h1>
-            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Self Check-In Kiosk</p>
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{t('intake.subtitle')}</p>
           </div>
         </div>
 
         <Link to="/login">
           <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground">
-            <ChevronLeft className="mr-2 h-4 w-4" /> Back to Staff Login
+            <ChevronLeft className="mr-2 h-4 w-4" /> {t('intake.back_login')}
           </Button>
         </Link>
       </header>
@@ -301,7 +303,7 @@ export default function PatientIntake() {
                 {/* 1. AUTO-FILL TOOLBAR */}
                 <div className="bg-muted/30 border-b border-border p-3 flex items-center justify-between gap-4">
                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-2">Quick Fill Options:</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-2">{t('intake.quick_fill')}</span>
                    </div>
                    
                    <div className="flex items-center gap-2">
@@ -342,7 +344,7 @@ export default function PatientIntake() {
                            htmlFor="ehr-upload" 
                            className="flex items-center gap-2 h-8 px-3 rounded-md bg-background border border-border hover:border-primary/50 cursor-pointer transition-all text-xs font-medium shadow-sm"
                         >
-                           <Upload className="h-3 w-3 text-primary" /> Upload Medical Record
+                           <Upload className="h-3 w-3 text-primary" /> {t('intake.upload_record')}
                         </Label>
                       </div>
 
@@ -358,7 +360,7 @@ export default function PatientIntake() {
                           }`}
                         >
                           {isListening ? <Mic className="h-3 w-3" /> : <MicOff className="h-3 w-3 text-primary" />}
-                          {isListening ? "Listening..." : "Dictate Symptoms"}
+                          {isListening ? t('intake.listening') : t('intake.dictate')}
                         </button>
                       )}
                    </div>
@@ -371,13 +373,13 @@ export default function PatientIntake() {
                     {/* SECTION: PATIENT IDENTITY */}
                     <div className="space-y-4">
                        <h3 className="text-sm font-bold text-foreground flex items-center gap-2 border-b border-border pb-2">
-                          <User className="h-4 w-4 text-primary" /> Patient Identity
+                          <User className="h-4 w-4 text-primary" /> {t('intake.patient_identity')}
                        </h3>
                        
                        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
                           {/* Name */}
                           <div className="md:col-span-6 space-y-2">
-                             <Label htmlFor="name" className="text-xs text-muted-foreground font-medium">Full Name</Label>
+                             <Label htmlFor="name" className="text-xs text-muted-foreground font-medium">{t('intake.full_name')}</Label>
                              <div className="relative group">
                                 <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                 <Input 
@@ -393,14 +395,14 @@ export default function PatientIntake() {
 
                           {/* Age */}
                           <div className="md:col-span-3 space-y-2">
-                             <Label htmlFor="age" className="text-xs text-muted-foreground font-medium">Age</Label>
+                             <Label htmlFor="age" className="text-xs text-muted-foreground font-medium">{t('intake.age')}</Label>
                              <div className="relative group">
                                 <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
                                 <Input 
                                    id="age"
                                    type="number"
                                    required
-                                   placeholder="00"
+                                   placeholder={t('intake.age_placeholder')}
                                    value={form.age}
                                    onChange={e => setForm({...form, age: e.target.value})}
                                    className="pl-9 bg-background/50 h-10"
@@ -410,15 +412,15 @@ export default function PatientIntake() {
 
                           {/* Gender */}
                           <div className="md:col-span-3 space-y-2">
-                             <Label htmlFor="gender" className="text-xs text-muted-foreground font-medium">Gender</Label>
+                             <Label htmlFor="gender" className="text-xs text-muted-foreground font-medium">{t('intake.gender')}</Label>
                              <Select required value={form.gender} onValueChange={v => setForm({...form, gender: v})}>
                                 <SelectTrigger className="bg-background/50 h-10">
-                                   <SelectValue placeholder="Select" />
+                                   <SelectValue placeholder={t('intake.select')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                   <SelectItem value="Male">Male</SelectItem>
-                                   <SelectItem value="Female">Female</SelectItem>
-                                   <SelectItem value="Other">Other</SelectItem>
+                                   <SelectItem value="Male">{t('intake.male')}</SelectItem>
+                                   <SelectItem value="Female">{t('intake.female')}</SelectItem>
+                                   <SelectItem value="Other">{t('intake.other')}</SelectItem>
                                 </SelectContent>
                              </Select>
                           </div>
@@ -429,7 +431,7 @@ export default function PatientIntake() {
                     <div className="space-y-4">
                        <div className="flex items-center justify-between border-b border-border pb-2">
                           <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                             <Stethoscope className="h-4 w-4 text-primary" /> Chief Complaint
+                             <Stethoscope className="h-4 w-4 text-primary" /> {t('intake.chief_complaint')}
                           </h3>
                           {/* Live Vitals Badges (if detected via voice) */}
                           {(extractedData.Heart_Rate || extractedData.Temperature) && (
@@ -453,7 +455,7 @@ export default function PatientIntake() {
                              id="symptoms"
                              required
                              rows={6}
-                             placeholder="Describe your symptoms in detail... (e.g., 'Sharp pain in chest since morning')"
+                             placeholder={t('intake.symptoms_placeholder')}
                              value={form.symptoms}
                              onChange={e => setForm({...form, symptoms: e.target.value})}
                              className={`bg-background/50 min-h-[140px] text-base resize-none focus:ring-primary/20 transition-all ${isListening ? "ring-2 ring-red-500/50 border-red-500/50" : ""}`}
@@ -476,12 +478,12 @@ export default function PatientIntake() {
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
                                   </span>
-                                  Listening...
+                                  {t('intake.listening')}
                                 </>
                               ) : (
                                 <>
                                   <Mic className="h-3.5 w-3.5" />
-                                  Dictate
+                                  {t('intake.dictate')}
                                 </>
                               )}
                             </button>
@@ -492,16 +494,16 @@ export default function PatientIntake() {
                     {/* SECTION: EMERGENCY CONTACT */}
                     <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 space-y-4">
                        <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-primary" /> Emergency Contact
+                          <Phone className="h-4 w-4 text-primary" /> {t('intake.emergency_contact')}
                        </h3>
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                             <Label htmlFor="ename" className="text-xs text-muted-foreground font-medium">Contact Name</Label>
+                             <Label htmlFor="ename" className="text-xs text-muted-foreground font-medium">{t('intake.contact_name')}</Label>
                              <div className="relative">
                                 <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input 
                                    id="ename"
-                                   placeholder="Relative Name"
+                                   placeholder={t('intake.contact_placeholder')}
                                    value={form.emergencyName}
                                    onChange={e => setForm({...form, emergencyName: e.target.value})}
                                    className="pl-9 bg-white/40 border-primary/10 h-10"
@@ -509,7 +511,7 @@ export default function PatientIntake() {
                              </div>
                           </div>
                           <div className="space-y-2">
-                             <Label htmlFor="ephone" className="text-xs text-muted-foreground font-medium">Phone Number</Label>
+                             <Label htmlFor="ephone" className="text-xs text-muted-foreground font-medium">{t('intake.phone')}</Label>
                              <div className="relative">
                                 <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input 
@@ -537,11 +539,11 @@ export default function PatientIntake() {
                    >
                       {loading ? (
                          <span className="flex items-center gap-2">
-                            <Loader2 className="h-5 w-5 animate-spin" /> Processing Assessment...
+                            <Loader2 className="h-5 w-5 animate-spin" /> {t('intake.processing')}
                          </span>
                       ) : (
                          <span className="flex items-center gap-2">
-                            Submit for Triage <CheckCircle2 className="h-5 w-5" />
+                            {t('intake.submit')} <CheckCircle2 className="h-5 w-5" />
                          </span>
                       )}
                    </Button>
@@ -562,15 +564,15 @@ export default function PatientIntake() {
              >
                <div className="flex items-center justify-between mb-4">
                  <div>
-                   <h2 className="text-2xl font-bold font-serif-display text-foreground">Assessment Complete</h2>
-                   <p className="text-sm text-muted-foreground">AI Analysis based on reported symptoms.</p>
+                   <h2 className="text-2xl font-bold font-serif-display text-foreground">{t('intake.assessment_complete')}</h2>
+                   <p className="text-sm text-muted-foreground">{t('intake.assessment_desc')}</p>
                  </div>
                  <Button 
                    variant="outline" 
                    onClick={() => { setStep("form"); setResult(null); setForm({name:"", age:"", gender:"", symptoms:"", emergencyName: "", emergencyPhone: ""}); setExtractedData({}); setNearestHospital(null); }}
                    className="gap-2"
                  >
-                   <ChevronLeft className="h-4 w-4" /> New Check-In
+                   <ChevronLeft className="h-4 w-4" /> {t('intake.new_checkin')}
                  </Button>
                </div>
 
@@ -581,13 +583,13 @@ export default function PatientIntake() {
                       <div className="rounded-xl border border-border bg-card/60 backdrop-blur-md overflow-hidden shadow-lg">
                          <div className="p-6 flex flex-col items-center text-center space-y-4">
                             <div className="space-y-1">
-                              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Recommended Department:</p>
+                              <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{t('intake.recommended_dept')}</p>
                               <h2 className="text-3xl font-black font-serif-display text-primary uppercase">
-                                  {result.referral?.department.replace(/_/g, " ") || "General Medicine"}
+                                  {t(`departments.${result.referral?.department || "General_Medicine"}`, result.referral?.department?.replace(/_/g, " "))}
                               </h2>
                               <p className="text-sm text-muted-foreground max-w-md mx-auto">
                                   {result.details}
-                              </p>
+                            </p>
                             </div>
                          </div>
                       </div>
@@ -599,11 +601,11 @@ export default function PatientIntake() {
                          <div className="rounded-xl border border-border bg-card/60 p-6 flex flex-col justify-between">
                             <div>
                                <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2 mb-4">
-                                  <MapPin className="h-4 w-4 text-primary" /> Nearest Facility
+                                  <MapPin className="h-4 w-4 text-primary" /> {t('intake.nearest_facility')}
                                </h3>
                                {locating ? (
                                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                     <Loader2 className="h-4 w-4 animate-spin" /> Locating nearest hospital...
+                                     <Loader2 className="h-4 w-4 animate-spin" /> {t('intake.locating')}
                                   </div>
                                ) : nearestHospital ? (
                                   <div className="space-y-2">
@@ -615,7 +617,7 @@ export default function PatientIntake() {
                                      </p>
                                   </div>
                                ) : (
-                                  <p className="text-sm text-muted-foreground">Location data unavailable.</p>
+                                  <p className="text-sm text-muted-foreground">{t('intake.location_unavailable')}</p>
                                )}
                             </div>
 
@@ -629,7 +631,7 @@ export default function PatientIntake() {
                                   }
                                }}
                             >
-                               <Navigation className="h-4 w-4" /> Navigate Now
+                               <Navigation className="h-4 w-4" /> {t('intake.navigate')}
                             </Button>
                          </div>
 
@@ -649,7 +651,7 @@ export default function PatientIntake() {
                                ></iframe>
                             ) : (
                                <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">
-                                  {locating ? "Acquiring GPS..." : "Map Unavailable"}
+                                  {locating ? t('intake.acquiring_gps') : t('intake.map_unavailable')}
                                </div>
                             )}
                          </div>
@@ -663,10 +665,10 @@ export default function PatientIntake() {
                                <Ambulance className="h-6 w-6 text-red-500" />
                             </div>
                             <div>
-                               <h4 className="font-bold text-red-500">Call Ambulance</h4>
-                               <p className="text-xs text-red-400/80 mb-2">Immediate dispatch.</p>
+                               <h4 className="font-bold text-red-500">{t('intake.call_ambulance')}</h4>
+                               <p className="text-xs text-red-400/80 mb-2">{t('intake.dispatch_desc')}</p>
                                <Button size="sm" variant="destructive" className="w-full bg-red-500 hover:bg-red-600" onClick={handleCallAmbulance}>
-                                  Call 108 Now
+                                  {t('intake.call_btn')}
                                </Button>
                             </div>
                          </div>
@@ -677,10 +679,10 @@ export default function PatientIntake() {
                                <Phone className="h-6 w-6 text-blue-500" />
                             </div>
                             <div className="flex-1">
-                               <h4 className="font-bold text-blue-500">Notify Emergency Contact</h4>
+                               <h4 className="font-bold text-blue-500">{t('intake.notify_contact')}</h4>
                                <p className="text-xs text-blue-400/80 mb-2">{form.emergencyName || "Family/Friend"}</p>
                                <Button size="sm" variant="default" className="w-full bg-blue-500 hover:bg-blue-600" onClick={handleSendSMS} disabled={sendingSms}>
-                                  {sendingSms ? <Loader2 className="h-3 w-3 animate-spin" /> : "Send SMS Alert"}
+                                  {sendingSms ? <Loader2 className="h-3 w-3 animate-spin" /> : t('intake.send_sms')}
                                </Button>
                             </div>
                          </div>
@@ -692,9 +694,9 @@ export default function PatientIntake() {
                          <div className="rounded-xl border border-dashed border-border bg-black/5 p-6 flex items-center justify-between">
                             <div className="flex items-center gap-4">
                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center"><Activity className="h-5 w-5 text-primary" /></div>
-                               <div><h4 className="font-bold text-sm">Wearable Device</h4><p className="text-xs text-muted-foreground">Sync for live vitals.</p></div>
+                               <div><h4 className="font-bold text-sm">{t('intake.wearable')}</h4><p className="text-xs text-muted-foreground">{t('intake.sync_desc')}</p></div>
                             </div>
-                            <Button size="sm" onClick={handleConnectWearable} disabled={connecting}>{connecting ? "Connecting..." : "Connect"}</Button>
+                            <Button size="sm" onClick={handleConnectWearable} disabled={connecting}>{connecting ? t('intake.connecting') : t('intake.connect')}</Button>
                          </div>
                       ) : (
                         <motion.div 
@@ -704,7 +706,7 @@ export default function PatientIntake() {
                         >  
                            <div className="flex items-center justify-between px-2">
                               <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
-                                 <Activity className="h-4 w-4 text-green-500" /> Live Vitals Stream
+                                 <Activity className="h-4 w-4 text-green-500" /> {t('intake.live_vitals')}
                               </h3>
                               <span className="text-[10px] font-mono text-green-500 animate-pulse">● LIVE</span>
                            </div>

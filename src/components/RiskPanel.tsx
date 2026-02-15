@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useTranslation } from "react-i18next";
 import { TriageResult } from "@/hooks/useTriage";
 import { Patient } from "@/hooks/usePatients";
 import {
@@ -92,12 +93,16 @@ const PROTOCOLS = {
 };
 
 export default function RiskPanel({ result, patients, apiError, selectedPatient }: Props) {
+  const { t, i18n } = useTranslation();
   
   // Default to first patient if specific selection missing (e.g. live view)
   const activePatient = selectedPatient || patients[0]; 
 
   const handleExportPDF = () => {
     if (!activePatient) return;
+
+    // Force English for PDF
+    const tEn = i18n.getFixedT('en');
 
     const doc = new jsPDF();
     const primaryColor = [22, 163, 74]; // Emerald-ish branding for PARS
@@ -113,22 +118,22 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
-    doc.text("PARS", 14, 18);
+    doc.text(tEn('app.title'), 14, 18);
     
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(200, 200, 200);
-    doc.text("CLINICAL DECISION SUPPORT & ROUTING", 14, 24);
+    doc.text(tEn('risk.subtitle'), 14, 24);
 
     // Meta Data (Top Right)
     doc.setFontSize(9);
-    doc.text("DATE:", 150, 12);
-    doc.text(new Date().toLocaleDateString().toUpperCase(), 175, 12);
+    doc.text(`${tEn('pdf.date')}:`, 150, 12);
+    doc.text(new Date().toLocaleDateString('en-US').toUpperCase(), 175, 12);
     
-    doc.text("TIME:", 150, 17);
-    doc.text(new Date().toLocaleTimeString().toUpperCase(), 175, 17);
+    doc.text(`${tEn('pdf.time')}:`, 150, 17);
+    doc.text(new Date().toLocaleTimeString('en-US').toUpperCase(), 175, 17);
 
-    doc.text("CASE ID:", 150, 22);
+    doc.text(`${tEn('pdf.case_id')}:`, 150, 22);
     doc.text(`#${activePatient.id.slice(0, 6).toUpperCase()}`, 175, 22);
 
     // --- 2. PATIENT IDENTITY ---
@@ -137,18 +142,18 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("PATIENT IDENTITY", 14, currentY);
+    doc.text(tEn('risk.patient_identity'), 14, currentY);
     
     doc.setDrawColor(200, 200, 200);
     doc.line(14, currentY + 2, 196, currentY + 2); // Underline
 
     const patientData = [
-      [`NAME:  ${activePatient.name}`, `AGE / SEX:  ${activePatient.age} / ${activePatient.gender}`],
-      [`ARRIVAL:  ${activePatient.arrival_mode.toUpperCase()}`, `HISTORY:  ${[
-          activePatient.diabetes ? "Diabetic" : "",
-          activePatient.hypertension ? "HTN" : "",
-          activePatient.heart_disease ? "Cardiac" : ""
-        ].filter(Boolean).join(", ") || "None Reported"}`
+      [`${tEn('pdf.name')}:  ${activePatient.name}`, `${tEn('pdf.age_sex')}:  ${activePatient.age} / ${activePatient.gender}`],
+      [`${tEn('pdf.arrival')}:  ${activePatient.arrival_mode.toUpperCase()}`, `${tEn('pdf.history')}:  ${[
+          activePatient.diabetes ? tEn('pdf.diabetic') : "",
+          activePatient.hypertension ? tEn('pdf.htn') : "",
+          activePatient.heart_disease ? tEn('pdf.cardiac') : ""
+        ].filter(Boolean).join(", ") || tEn('pdf.none_reported')}`
       ]
     ];
 
@@ -165,11 +170,11 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
     // --- 3. SUBJECTIVE: CHIEF COMPLAINT ---
     doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
-    doc.text("CHIEF COMPLAINT & SYMPTOMS", 14, currentY);
+    doc.text(tEn('risk.chief_complaint'), 14, currentY);
     doc.line(14, currentY + 2, 196, currentY + 2);
 
     // Background box for complaint
-    const complaintText = activePatient.chief_complaint || activePatient.explanation || "No narrative symptoms recorded by triage interface.";
+    const complaintText = activePatient.chief_complaint || activePatient.explanation || tEn('risk.no_symptoms');
     const splitComplaint = doc.splitTextToSize(complaintText, 180);
     const boxHeight = (splitComplaint.length * 6) + 10;
 
@@ -188,18 +193,18 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(0, 0, 0);
-    doc.text("OBJECTIVE VITALS", 14, currentY);
+    doc.text(tEn('risk.objective_vitals'), 14, currentY);
     doc.line(14, currentY + 2, 196, currentY + 2);
 
     const vitals = [
-      ["HR", `${activePatient.heart_rate} bpm`, "BP", `${activePatient.systolic_bp}/${activePatient.diastolic_bp} mmHg`, "SpO2", `${activePatient.o2_saturation}%`],
-      ["TEMP", `${activePatient.temperature}°C`, "RR", `${activePatient.respiratory_rate}/min`, "PAIN", `${activePatient.pain_score}/10`],
-      ["GCS", `${activePatient.gcs_score}/15`, "", "", "", ""]
+      [tEn('triage.hr'), `${activePatient.heart_rate} bpm`, tEn('triage.bp_sys'), `${activePatient.systolic_bp}/${activePatient.diastolic_bp} mmHg`, tEn('triage.spo2'), `${activePatient.o2_saturation}%`],
+      [tEn('triage.temp'), `${activePatient.temperature}°C`, tEn('triage.rr'), `${activePatient.respiratory_rate}/min`, tEn('triage.pain_score'), `${activePatient.pain_score}/10`],
+      [tEn('triage.gcs_score'), `${activePatient.gcs_score}/15`, "", "", "", ""]
     ];
 
     autoTable(doc, {
       startY: currentY + 5,
-      head: [['Metric', 'Value', 'Metric', 'Value', 'Metric', 'Value']],
+      head: [[tEn('pdf.metric'), tEn('pdf.value'), tEn('pdf.metric'), tEn('pdf.value'), tEn('pdf.metric'), tEn('pdf.value')]],
       body: vitals,
       theme: 'grid',
       headStyles: { fillColor: [51, 65, 85], textColor: 255, fontSize: 9, halign: 'center' },
@@ -216,7 +221,7 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
     // --- 5. PARS ASSESSMENT (The "Conclusion") ---
     doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
-    doc.text("PARS ASSESSMENT & DISPOSITION", 14, currentY);
+    doc.text(tEn('risk.assessment'), 14, currentY);
     doc.line(14, currentY + 2, 196, currentY + 2);
 
     // Dynamic Color for Risk
@@ -230,7 +235,7 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
     
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(10);
-    doc.text("TRIAGE LEVEL", 34, currentY + 14, { align: "center" });
+    doc.text(tEn('risk.triage_level'), 34, currentY + 14, { align: "center" });
     doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
     doc.text(activePatient.risk_label || "N/A", 34, currentY + 23, { align: "center" });
@@ -243,12 +248,14 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
     doc.setTextColor(80, 80, 80);
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text("RECOMMENDED DEPARTMENT:", 60, currentY + 14);
+    doc.text(tEn('risk.recommended_dept'), 60, currentY + 14);
 
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    const dept = activePatient.department?.replace(/_/g, " ").toUpperCase() || "GENERAL MEDICINE";
+    const deptKey = activePatient.department || "General_Medicine";
+    // Force English department name
+    const dept = tEn(`departments.${deptKey}`, deptKey.replace(/_/g, " ")).toUpperCase();
     doc.text(dept, 60, currentY + 23);
 
     // --- FOOTER ---
@@ -256,7 +263,7 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
     doc.setFont("helvetica", "normal");
-    doc.text("Generated by PARS (Patient Assessment & Routing System). This report is a clinical aid and does not replace physician judgment.", 105, pageHeight - 10, { align: "center" });
+    doc.text(tEn('risk.footer_note'), 105, pageHeight - 10, { align: "center" });
 
     doc.save(`PARS_Report_${activePatient.name.replace(/\s+/g, '_')}.pdf`);
   };
@@ -307,12 +314,12 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
                   ${currentTheme.border} ${currentTheme.bg} ${currentTheme.text} hover:bg-opacity-80`}
               >
                 <FileText className="h-3 w-3" />
-                Export PDF
+                {t('risk.export_pdf')}
               </button>
           )}
           {result && (
             <Badge variant="outline" className={`${currentTheme.border} ${currentTheme.text} ${currentTheme.bg} transition-all duration-500`}>
-              LIVE
+              {t('risk.live')}
             </Badge>
           )}
         </div>
@@ -326,7 +333,7 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
           {apiError && (
             <div className="flex items-center gap-3 rounded border border-red-900/50 bg-red-950/20 p-3 text-sm text-red-400">
               <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span className="font-mono text-xs">ERR_API_OFFLINE: FALLBACK_MODE_ACTIVE</span>
+              <span className="font-mono text-xs">{t('risk.err_api')}</span>
             </div>
           )}
 
@@ -361,7 +368,7 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
                   <span className={`text-6xl font-black tracking-tighter drop-shadow-md font-mono transition-colors duration-500 ${currentTheme.text}`}>
                     {scorePercent}%
                   </span>
-                  <span className="text-[10px] font-bold text-white uppercase tracking-[0.2em] mt-2">Risk Index</span>
+                  <span className="text-[10px] font-bold text-white uppercase tracking-[0.2em] mt-2">{t('risk.risk_index')}</span>
                 </motion.div>
               </div>
             </div>
@@ -374,7 +381,7 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
               >
                 <div className={`px-8 py-2 rounded border bg-black transition-all duration-500 ${currentTheme.border} ${currentTheme.glow}`}>
                   <span className={`text-sm font-bold tracking-widest uppercase ${currentTheme.text}`}>
-                    {result.risk_label} PRIORITY
+                    {result.risk_label} {t('risk.priority')}
                   </span>
                 </div>
               </motion.div>
@@ -390,7 +397,7 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
               />
               <div className="mb-3 flex items-center gap-2">
                 <Info className="h-4 w-4 text-zinc-500" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">AI Assessment</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">{t('risk.ai_assessment')}</h3>
               </div>
               <p className="text-sm leading-relaxed text-zinc-300 font-mono">
                 {">"} {result.details}
@@ -404,13 +411,13 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
                <div className="flex items-center justify-between">
                   <h3 className="flex items-center gap-2 text-sm font-bold text-zinc-100 uppercase tracking-wide">
                     <ShieldAlert className={`h-4 w-4 ${currentTheme.text}`} />
-                    Specialist Match
+                    {t('risk.specialist_match')}
                   </h3>
                   <button 
                     onClick={() => setShowFullList(true)}
                     className={`flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider hover:underline ${currentTheme.textBright}`}
                   >
-                    View Full List <ChevronRight size={10} />
+                    {t('risk.view_full_list')} <ChevronRight size={10} />
                   </button>
                </div>
 
@@ -421,9 +428,9 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
                   
                   <div className="relative p-6 flex flex-col items-center justify-center text-center gap-2">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Recommended Department</p>
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">{t('risk.recommended_dept')}</p>
                         <h2 className="text-2xl font-black text-white uppercase tracking-tight font-serif-display">
-                          {result.referral.department.replace("_", " ")}
+                          {t(`departments.${result.referral.department}`, result.referral.department.replace(/_/g, " "))}
                         </h2>
                       </div>
                   </div>
@@ -445,10 +452,10 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
                                  <div className="text-left">
                                     <div className="text-xs font-bold text-white flex items-center gap-2">
                                       {doc.name}
-                                      <Badge variant="secondary" className="h-4 px-1 text-[9px] bg-zinc-800 text-zinc-400 border-0">Top Match</Badge>
+                                      <Badge variant="secondary" className="h-4 px-1 text-[9px] bg-zinc-800 text-zinc-400 border-0">{t('risk.top_match')}</Badge>
                                     </div>
                                     <div className="text-[10px] text-zinc-500">
-                                      Senior Resident • {doc.experience}y Exp
+                                      {t('risk.senior_resident')} • {doc.experience}y {t('risk.exp')}
                                     </div>
                                  </div>
                               </div>
@@ -462,7 +469,7 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
                          );
                        })
                     ) : (
-                      <div className="text-center text-[10px] text-zinc-500 py-1">No specialists currently available</div>
+                      <div className="text-center text-[10px] text-zinc-500 py-1">{t('risk.no_specialists')}</div>
                     )}
                   </div>
                </div>
@@ -475,7 +482,7 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
                <div className="flex items-center justify-between border-b border-zinc-800 pb-2">
                   <h3 className="flex items-center gap-2 text-sm font-bold text-zinc-100 uppercase tracking-wide">
                     <ClipboardList className={`h-4 w-4 ${currentTheme.text}`} />
-                    Priority Action
+                    {t('risk.priority_action')}
                   </h3>
                </div>
                
@@ -491,7 +498,7 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
                     <randomProtocol.icon size={18} />
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">RECOMMENDED STEP</p>
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1">{t('risk.recommended_step')}</p>
                     <p className={`text-sm font-bold font-mono ${randomProtocol.urgent ? 'text-white' : 'text-zinc-300'}`}>
                       {randomProtocol.text.toUpperCase()}
                     </p>
@@ -503,7 +510,7 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
           {!result && (
             <div className="flex flex-col items-center justify-center py-12 text-center opacity-30">
               <Siren className="mb-4 h-12 w-12 text-zinc-500" />
-              <p className="text-sm font-mono text-zinc-500">AWAITING PATIENT DATA...</p>
+              <p className="text-sm font-mono text-zinc-500">{t('risk.awaiting_data')}</p>
             </div>
           )}
         </div>
@@ -517,14 +524,14 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
               <div className="flex items-center justify-between">
                 <DialogTitle className="flex items-center gap-2 text-xl font-bold text-white uppercase tracking-tight">
                   <Users className={`h-5 w-5 ${currentTheme.text}`} />
-                  Full Specialist List
+                  {t('risk.full_list')}
                 </DialogTitle>
                 <div className={`px-2 py-1 border rounded text-[10px] font-mono ${currentTheme.badge}`}>
-                  {availableSpecialists.length} AVAILABLE
+                  {availableSpecialists.length} {t('risk.available')}
                 </div>
               </div>
               <DialogDescription className="text-zinc-400 font-mono text-xs">
-                ALL ON-CALL DOCTORS FOR: <span className="text-white font-bold">{result?.referral?.department.replace("_", " ")}</span>
+                {t('risk.on_call')} <span className="text-white font-bold">{t(`departments.${result?.referral?.department}`, result?.referral?.department?.replace(/_/g, " "))}</span>
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -558,15 +565,15 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
                                 {isRecommended && (
                                   <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold text-black uppercase tracking-wider`}
                                     style={{ backgroundColor: currentTheme.hex }}>
-                                    Best Match
+                                    {t('risk.best_match')}
                                   </span>
                                 )}
                               </div>
                               <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-500 mt-1">
-                                <span>SENIOR RESIDENT</span>
+                                <span>{t('risk.senior_resident')}</span>
                                 <span className="text-zinc-700">|</span>
                                 <span className={isRecommended ? currentTheme.textBright : ""}>
-                                  {doc.experience} YEARS EXPERIENCE
+                                  {doc.experience} {t('risk.years_exp')}
                                 </span>
                               </div>
                            </div>
@@ -578,7 +585,7 @@ export default function RiskPanel({ result, patients, apiError, selectedPatient 
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                               </span>
-                              Online
+                              {t('risk.online')}
                            </span>
                         </div>
                      </div>

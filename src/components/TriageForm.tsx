@@ -11,6 +11,7 @@ import { Stethoscope, Loader2, Upload, FileText, Mic, MicOff } from "lucide-reac
 import { PatientInput } from "@/hooks/useTriage";
 import { useSpeechToText } from "@/hooks/useSpeechToText";
 import { parseVoiceInput } from "@/utils/voiceParser";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   onSubmit: (data: PatientInput & { name: string }) => void;
@@ -38,6 +39,7 @@ const INITIAL: Partial<PatientInput> & { name: string } = {
 };
 
 export default function TriageForm({ onSubmit, loading }: Props) {
+  const { t } = useTranslation();
   // @ts-ignore - Allowing partial state for form handling before submission
   const [form, setForm] = useState(INITIAL);
   const [isUploading, setIsUploading] = useState(false);
@@ -132,8 +134,8 @@ export default function TriageForm({ onSubmit, loading }: Props) {
                 <FileText size={20} />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-foreground">Auto-Fill from EHR</h3>
-                <p className="text-[10px] text-muted-foreground">Upload PDF medical report</p>
+                <h3 className="text-sm font-semibold text-foreground">{t('triage.auto_fill')}</h3>
+                <p className="text-[10px] text-muted-foreground">{t('triage.upload_pdf')}</p>
               </div>
             </div>
 
@@ -149,12 +151,12 @@ export default function TriageForm({ onSubmit, loading }: Props) {
                 {isUploading ? (
                   <>
                     <Loader2 className="animate-spin" size={14} />
-                    Scanning...
+                    {t('triage.scanning')}
                   </>
                 ) : (
                   <>
                     <Upload size={14} />
-                    Upload PDF
+                    {t('triage.upload_btn')}
                   </>
                 )}
               </div>
@@ -164,7 +166,7 @@ export default function TriageForm({ onSubmit, loading }: Props) {
         
         {/* Name */}
         <div className="space-y-1">
-          <Label className="text-xs text-white">Patient Name</Label>
+          <Label className="text-xs text-white">{t('triage.patient_name')}</Label>
           <Input
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
@@ -176,7 +178,7 @@ export default function TriageForm({ onSubmit, loading }: Props) {
         {/* Chief Complaint WITH VOICE */}
         <div className="space-y-1 relative">
           <div className="flex justify-between items-center">
-             <Label className="text-xs text-white">Chief Complaint / Symptoms (Optional)</Label>
+             <Label className="text-xs text-white">{t('triage.chief_complaint')}</Label>
              {hasSupport && (
                <button  
                  type="button"
@@ -186,7 +188,7 @@ export default function TriageForm({ onSubmit, loading }: Props) {
                  }`}
                >
                  {isListening ? <Mic className="h-3 w-3" /> : <MicOff className="h-3 w-3" />}
-                 {isListening ? "Listening" : "Voice Input"}
+                 {isListening ? t('triage.listening') : t('triage.voice_input')}
                </button>
              )}
           </div>
@@ -203,7 +205,7 @@ export default function TriageForm({ onSubmit, loading }: Props) {
         {/* Demographics */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <Label className="text-xs text-white">Age</Label>
+            <Label className="text-xs text-white">{t('triage.age')}</Label>
             <Input
               type="number"
               value={form.Age === undefined ? "" : form.Age}
@@ -215,29 +217,29 @@ export default function TriageForm({ onSubmit, loading }: Props) {
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-white">Gender</Label>
+            <Label className="text-xs text-white">{t('triage.gender')}</Label>
             <Select value={form.Gender} onValueChange={(v) => set("Gender", v)}>
               <SelectTrigger className="border-border bg-secondary text-foreground data-[placeholder]:text-muted-foreground/40">
                 <SelectValue placeholder="e.g. Male" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Male">Male</SelectItem>
-                <SelectItem value="Female">Female</SelectItem>
+                <SelectItem value="Male">{t('triage.male')}</SelectItem>
+                <SelectItem value="Female">{t('triage.female')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
         {/* Vitals */}
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Vitals</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">{t('triage.vitals')}</p>
         <div className="grid grid-cols-2 gap-3">
           {[
-            ["Heart_Rate", "Heart Rate (bpm)", 0, 300, "e.g. 80"],
-            ["Systolic_BP", "Systolic BP (mmHg)", 0, 300, "e.g. 120"],
-            ["Diastolic_BP", "Diastolic BP (mmHg)", 0, 200, "e.g. 80"],
-            ["O2_Saturation", "O₂ Saturation (%)", 0, 100, "e.g. 98"],
-            ["Temperature", "Temperature (°C)", 30, 45, "e.g. 37.0"],
-            ["Respiratory_Rate", "Resp Rate", 0, 60, "e.g. 16"],
+            ["Heart_Rate", t('triage.hr'), 0, 300, "e.g. 80"],
+            ["Systolic_BP", t('triage.bp_sys'), 0, 300, "e.g. 120"],
+            ["Diastolic_BP", t('triage.bp_dia'), 0, 200, "e.g. 80"],
+            ["O2_Saturation", t('triage.spo2'), 0, 100, "e.g. 98"],
+            ["Temperature", t('triage.temp'), 30, 45, "e.g. 37.0"],
+            ["Respiratory_Rate", t('triage.rr'), 0, 60, "e.g. 16"],
           ].map(([key, label, min, max, placeholder]) => (
             <div key={key as string} className="space-y-1">
               <Label className="text-xs text-white">{label as string}</Label>
@@ -256,10 +258,10 @@ export default function TriageForm({ onSubmit, loading }: Props) {
         </div>
 
         {/* Clinical */}
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Clinical</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">{t('triage.clinical')}</p>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <Label className="text-xs text-white">Pain Score (0-10)</Label>
+            <Label className="text-xs text-white">{t('triage.pain_score')} (0-10)</Label>
             <Input
               type="number"
               value={form.Pain_Score === undefined ? "" : form.Pain_Score}
@@ -271,7 +273,7 @@ export default function TriageForm({ onSubmit, loading }: Props) {
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs text-white">GCS Score (3-15)</Label>
+            <Label className="text-xs text-white">{t('triage.gcs_score')} (3-15)</Label>
             <Input
               type="number"
               value={form.GCS_Score === undefined ? "" : form.GCS_Score}
@@ -285,20 +287,20 @@ export default function TriageForm({ onSubmit, loading }: Props) {
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs text-white">Arrival Mode</Label>
+          <Label className="text-xs text-white">{t('triage.arrival_mode')}</Label>
           <Select value={form.Arrival_Mode} onValueChange={(v) => set("Arrival_Mode", v)}>
             <SelectTrigger className="border-border bg-secondary text-foreground data-[placeholder]:text-muted-foreground/40">
               <SelectValue placeholder="e.g. Walk-in" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Walk-in">Walk-in</SelectItem>
-              <SelectItem value="Ambulance">Ambulance</SelectItem>
+              <SelectItem value="Walk-in">{t('triage.walk_in')}</SelectItem>
+              <SelectItem value="Ambulance">{t('triage.ambulance')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* History */}
-        <p className="text-xs font-semibold uppercase tracking-wider text-primary">Medical History</p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">{t('triage.medical_history')}</p>
         <div className="flex flex-wrap gap-4">
           {(["Diabetes", "Hypertension", "Heart_Disease"] as const).map((key) => (
             <label key={key} className="flex items-center gap-2 text-sm text-foreground">
@@ -319,7 +321,7 @@ export default function TriageForm({ onSubmit, loading }: Props) {
             className="w-full animate-pulse-glow bg-primary py-6 text-lg font-bold text-primary-foreground hover:bg-primary/80"
           >
             {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
-            {loading ? "ANALYZING..." : " ANALYZE"}
+            {loading ? t('triage.analyzing') : t('triage.analyze_btn')}
           </Button>
         </motion.div>
       </form>

@@ -184,7 +184,7 @@ def get_department_legacy(complaint: str) -> str:
         "Toxicology": [
             "poison", "drug", "pill", "chemical", "ingestion", "venom", 
             "snake bite", "spider bite", "reaction", "alcohol", "intoxication", 
-            "substance", "fume", "gas"
+            "substance", "fume", "gas", "dizziness", "vomitting", "alcohol"
         ]
     }
 

@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Activity, Clock } from "lucide-react";
 import { Patient } from "@/hooks/usePatients";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   patients: Patient[];
@@ -35,6 +36,7 @@ function getDisplayId(id: string) {
 }
 
 export default function PatientQueue({ patients, selectedId, onSelect }: Props) {
+  const { t } = useTranslation();
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
@@ -74,7 +76,7 @@ export default function PatientQueue({ patients, selectedId, onSelect }: Props) 
                 <div className={`rounded-full border px-2 py-0.5 text-xs font-bold ${riskColor(p.risk_label)} ${
                   p.risk_label === "HIGH" ? "animate-pulse" : ""
                 }`}>
-                  {p.risk_label || "PENDING"}
+                  {p.risk_label || t('queue.pending')}
                 </div>
               </div>
               <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
@@ -92,8 +94,8 @@ export default function PatientQueue({ patients, selectedId, onSelect }: Props) 
         {patients.length === 0 && (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <Activity className="mb-2 h-8 w-8" />
-            <p className="text-sm">No patients in queue</p>
-            <p className="text-xs">Submit a triage form or enable Live Sim</p>
+            <p className="text-sm">{t('queue.empty')}</p>
+            <p className="text-xs">{t('queue.submit_or_sim')}</p>
           </div>
         )}
       </div>
