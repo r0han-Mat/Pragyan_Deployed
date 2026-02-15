@@ -70,9 +70,9 @@ DEPARTMENTS = [
 # ============================================================
 
 MODEL_NAMES = [
-    "multi-qa-distilbert-cos-v1",
-    "all-MiniLM-L6-v2",
-    "paraphrase-MiniLM-L6-v2"
+    # "multi-qa-distilbert-cos-v1", # Too heavy
+    "all-MiniLM-L6-v2",           # Lightweight & fast
+    # "paraphrase-MiniLM-L6-v2"   # Redundant
 ]
 
 MODELS = []

@@ -114,11 +114,19 @@ def predict(patient: PatientInput):
     result = model.predict(patient.dict())
     
     # 2. Determine Referral Logic
-    # Use Chief Complaint if provided, otherwise fallback to the generated "details" (Why?)
+    # Use Chief Complaint if provided, otherwise fallback to the generated "details"
     referral_reason = patient.Chief_Complaint if patient.Chief_Complaint else result["details"]
     
-    # 3. Get Department & Doctor List
-    referral_data = get_referral(referral_reason)
+    # 3. Get Department & Doctor List (Graceful Fallback)
+    if DEPT_SERVICE_AVAILABLE and get_referral:
+        try:
+            referral_data = get_referral(referral_reason)
+        except Exception as e:
+            print(f"[PARS] Error getting referral: {e}")
+            referral_data = {"department": "General Medicine", "doctors": []}
+    else:
+        print("[PARS] Dept service unavailable, using fallback.")
+        referral_data = {"department": "General Medicine", "doctors": []}
     
     # 4. Merge Results
     result["referral"] = referral_data
