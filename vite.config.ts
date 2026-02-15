@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
   preview: {
     host: "::",
     port: Number(process.env.PORT) || 8080,
-    allowedHosts: true,
+    allowedHosts: ["calm-charisma-production.up.railway.app", ".up.railway.app"],
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
