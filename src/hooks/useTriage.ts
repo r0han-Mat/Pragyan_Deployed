@@ -120,7 +120,7 @@ function clientSideFallback(data: PatientInput): TriageResult {
   if (data.Arrival_Mode === "Ambulance") score += 0.08;
 
   const finalScore = Math.min(score, 0.99);
-  const label = finalScore >= 0.66 ? "HIGH" : finalScore >= 0.33 ? "MEDIUM" : "LOW";
+  const label = finalScore >= 0.75 ? "HIGH" : finalScore >= 0.40 ? "MEDIUM" : "LOW";
 
   const details: string[] = [];
   if (data.Heart_Rate > 120) details.push("Elevated heart rate");
