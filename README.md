@@ -2,7 +2,7 @@
 
 ![PARS Logo](public/logo.png)
 
-> **Hackathon Winning Project** | **Medical-Grade AI Triage System**
+> **Errorist Project** | **Medical-Grade AI Triage System**
 
 PARS is a state-of-the-art **AI-Powered Triage System** designed to revolutionize emergency room efficiency. By leveraging machine learning and real-time data processing, PARS automatically prioritizes patients based on vital signs and chief complaints, ensuring that critical cases receive immediate attention.
 
@@ -49,7 +49,7 @@ end
 
 ---
 
-## 🚀 Key Features
+## Key Features
 
 *   **Real-Time AI Triage**: Instantly categorizes patients into High, Medium, or Low risk using a Neural Network.
 *   **Automatic Department Referral**: Uses NLP (BERT-based models) to route patients to the correct specialist (e.g., "Chest pain" -> Cardiology).
@@ -61,7 +61,7 @@ end
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### **Frontend**
 *   **Framework**: [React](https://react.dev/) + [Vite](https://vitejs.dev/) (Fast Hardware-Accelerated Build Tool)
@@ -84,7 +84,7 @@ end
 
 ---
 
-## 🧠 ML & Triage Logic
+##  ML & Triage Logic
 
 ### **1. Risk Stratification Model**
 The heart of PARS is a **Neural Network (Sequential Model)** trained on `patients_data.csv`.
@@ -124,7 +124,7 @@ Uses **Sentence-BERT** to map chief complaints to medical departments via **Cosi
 
 ---
 
-## 📂 Component & Page Breakdown
+##  Component & Page Breakdown
 
 ### **1. Pages (`src/pages/`)**
 
@@ -182,7 +182,7 @@ npm run dev
 
 ---
 
-## 🧪 Testing & Validation
+##  Testing & Validation
 
 ### **Running the Triage Model Manually**
 You can test the AI logic without the frontend using the provider script:
@@ -202,7 +202,7 @@ To retrain the Neural Network on new data:
 
 ---
 
-## 🗺️ User Flows
+## User Flows
 
 ### **Patient Journey (Kiosk Mode)**
 ```mermaid
@@ -225,5 +225,6 @@ graph LR
     Dash -->|Analyze| Stats[Hospital Metrics]
     Dash -->|Action| Treat[Admit/Discharge Patient]
 ```
-#   P r a g y a n _ D e p l o y e d  
+#   P r a g y a n _ D e p l o y e d 
+ 
  
